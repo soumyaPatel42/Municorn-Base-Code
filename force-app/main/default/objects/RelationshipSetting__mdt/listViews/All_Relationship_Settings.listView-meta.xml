@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>All_Relationship_Settings</fullName>
+    <columns>MasterLabel</columns>
+    <columns>DeveloperName</columns>
+    <columns>ChildField__c</columns>
+    <columns>ChildFieldNew__c</columns>
+    <columns>ChildObject__c</columns>
+    <columns>ChildObjectNew__c</columns>
+    <columns>ChildRelationshipField__c</columns>
+    <columns>ChildRelationshipFieldNew__c</columns>
+    <columns>ObjectSetting__c</columns>
+    <columns>ParentObject__c</columns>
+    <filterScope>Everything</filterScope>
+    <label>All Relationship Settings</label>
+</ListView>
