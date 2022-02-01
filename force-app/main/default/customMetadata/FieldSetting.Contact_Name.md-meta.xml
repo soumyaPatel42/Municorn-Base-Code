@@ -43,6 +43,10 @@
         <value xsi:type="xsd:string">Contact</value>
     </values>
     <values>
+        <field>Order__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
         <field>ParentField__c</field>
         <value xsi:nil="true"/>
     </values>

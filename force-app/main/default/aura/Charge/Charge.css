@@ -1,0 +1,344 @@
+.THIS {
+    background: transparent;
+    margin: 0 0 0 0 !important;
+    padding: 0 0 0 0 !important;
+}
+
+.THIS .slds-grow {
+    width: 100%;
+}
+
+.THIS .slds-p-around_small {
+    padding-top: .2rem !important;
+    padding-bottom: .2rem !important;
+}
+
+.THIS #stripe-payment {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    display: block;
+    overflow: auto;
+}
+
+.THIS .modal-body {
+    padding: 0;
+    margin: 0;
+}
+
+.THIS .cuf-content {
+    padding: 0;
+    margin: 0;
+}
+
+.THIS ::placeholder {
+    color: #B0BEC5;
+}
+
+.THIS .slds-input[disabled] {
+    background: #ECEBEA;
+}
+
+.THIS .slds-lookup__search-input {
+    border-color: #DDDBDA;
+}
+
+.THIS .slds-lookup__search-input[disabled], .THIS .slds-input[disabled] {
+    border-color: #DDDBDA;
+}
+
+.THIS .c-container {
+    min-height: 250px;
+}
+
+.THIS .charge-base-page {
+    margin-bottom: 2rem !important;
+}
+
+.THIS .amount-input {
+    text-align: center;
+    background: #ECEBEA;
+    color: #1b4f87;
+    padding-bottom: .5rem !important;
+    padding-top: .5rem !important;
+    position: relative;
+}
+
+.THIS .amount-label {
+    font-size: 1.1rem !important;
+}
+
+.THIS .amount-input-field .slds-form-element__label, .THIS .amount-input-field .slds-assistive-text {
+    display: none !important;
+}
+
+.THIS .amount-input-field input {
+    background: transparent;
+    font-size: 1.3rem;
+    border: none;
+    max-width: 13rem;
+    border-radius: 0;
+    box-shadow: none;
+    cursor: pointer;
+    text-align: center;
+    border-bottom: 1px dashed gray;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.THIS .amount-input-field input[disabled] {
+    pointer-events: none;
+}
+
+.THIS .amount-input-field input:focus {
+    outline-width: 0;
+    -webkit-box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.THIS .amount-input-field input:disabled {
+    background: transparent;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.THIS .edit-amount-icon {
+    cursor: pointer;
+}
+
+.THIS .long-button {
+    margin-top: .5rem;
+    margin-left: .5rem;
+    min-width: 30%;
+}
+
+.THIS .long-button.expand {
+    width: 100% !important;
+}
+
+.THIS .input-layout {
+    margin-top: 0.4rem;
+    margin-bottom: 0.4rem;
+}
+
+.THIS .modal-footer > .slds-button {
+    display: none !important;
+}
+/*
+.THIS .styled-input input,
+.THIS .styled-input select,
+.THIS .styled-input input:focus,
+.THIS .styled-input select:focus,
+.THIS .styled-input label,
+.THIS .frequency-button-group {
+    border: none;
+    border-left: 3px solid #1b4f87;
+    border-bottom: 1px solid #9fbddd;
+}
+
+.THIS .styled-input label {
+    font-size: 0.8rem;
+    padding-left: 0.7rem;
+    color: #1b4f87;
+    margin-bottom: 0;
+    padding-bottom: 4px;
+    border-bottom: none !important;
+}
+
+
+.THIS .styled-input input, .THIS .styled-input select {
+    outline-width: 0;
+    font-size: 1rem;
+    border-radius: 0;
+    -webkit-box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.THIS .styled-input.small {
+    min-width: 10rem;
+    width: 33.3%;
+    float: left;
+}
+
+.THIS .styled-input.small label {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.THIS .styled-input.small input, .THIS .styled-input.small select {
+    font-size: 0.8rem;
+}
+
+.THIS .styled-input input:focus, .THIS .styled-input select:focus {
+    outline-width: 0;
+    -webkit-box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.THIS .styled-input input:disabled, .THIS .styled-input select:disabled {
+    border-bottom: none;
+    background: transparent;
+    -webkit-box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    cursor: not-allowed;
+}*/
+
+.THIS .styled-input, .THIS .styled-input label {
+    padding: 0 0.5rem;
+}
+
+.THIS .slds-button_icon {
+    margin-top: 0.2rem !important;
+}
+
+.THIS .search-selected {
+    background: #ECEBEA !important;
+}
+
+/* .THIS .frequency {
+    font-size: 0.8rem;
+    border: none;
+    border-radius: 0 !important;
+    margin: 0;
+    box-shadow: none;
+}
+
+.THIS .frequency:focus {
+    border: none;
+    box-shadow: none;
+} */
+
+.THIS .subscription-title {
+    display: block;
+    width: 100%;
+    margin: 1rem 0 .8rem 0;
+    padding-left: .8rem;
+    font-size: medium;
+ /*   color: #1b4f87;*/
+}
+
+.THIS .payment-mode-toggle, .THIS .payment-mode-toggle:focus, .THIS .payment-mode-toggle::after {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    line-height: 15px !important;
+}
+
+.THIS .payment-option {
+    background: #f1f1f1;
+    padding: .25rem 0rem;
+    border-radius: 5px;
+    margin-bottom: .5rem;
+}
+
+.THIS .payment-card-button, .THIS .payment-bank-button {
+    margin-bottom: 1rem;
+}
+
+.THIS .payment-card-number, .THIS .payment-bank-number {
+    padding: 0.5rem 1.5rem;
+    cursor:pointer;
+}
+
+.THIS .payment-cart {
+    margin-top: 2rem;
+}
+
+.THIS .txn-details {
+    width: 100%;
+    text-align: center;
+}
+
+.THIS #stripeCardUI {
+    border: none;
+    width: 100%;
+    padding: 10px;
+    height: 200px;
+    overflow: hidden;
+}
+
+.THIS .payment-option-detail {
+    display: inline-block;
+        pointer-events: none;
+}
+
+.THIS .card-number {
+    width: 10rem;
+}
+
+.THIS .card-expiry {
+    width: 5rem;
+}
+
+.THIS .card-name {
+    width: 10rem;
+}
+
+.THIS .bank-number {
+    width: 5rem;
+}
+
+.THIS .bank-name {
+    width: 10rem;
+}
+
+.THIS .bank-account-holder-name {
+    width: 10rem;
+}
+
+.THIS .payment-option-pane-layout {
+    border-bottom: 1px solid lightgray;
+    margin: 0;
+    padding: 0;
+}
+
+.THIS .charge-output .slds-table_header-fixed_container {
+    padding-top: .2rem !important;
+}
+
+.THIS .frequency-button-group-wrapper {
+    padding-top: .8rem !important;
+    padding-bottom: 0rem !important;
+}
+
+.THIS .transaction-summary-header {
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.THIS .payment-response-header {
+    height: 3rem;
+}
+
+.THIS .payment-response-header label {
+    display: block;
+    margin: 0.5rem;
+    font-weight: bold;
+    float:left;
+}
+
+.THIS .payment-response-header .slds-icon_container {
+    float: right;
+}
+
+.THIS .payment-response {
+    margin-bottom: 2rem;
+}
+
+.THIS .add-to-cart-button-container {
+    text-align: center;
+}
+
+.THIS .first-charge-date {
+    width: 25%;
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+}
+
+.THIS  .first-charge-date input {
+    font-size: 0.8rem !important;
+    color: #2b2a2a !important;
+}
