@@ -1,6 +1,6 @@
 public class PaymentFormController {
 
-    public List<PaymentRequest__c> paymentRequests { get; set; }
+    public List<Payment_Intent__c> paymentIntents { get; set; }
     public String pageUrl {get; set;}
     public Boolean isCreditcard {get; set;}
     public String pageToken {get; set;}
@@ -12,16 +12,18 @@ public class PaymentFormController {
     
 
     public PaymentFormController() {
-        paymentRequests = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
-        amount = paymentRequests[0].Amount__c;
-        accountId = paymentRequests[0].Account__c;
+        paymentIntents = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
+        string BaseURL = ApexPages.currentPage().getHeaders().get('Host');
+        System.debug('BaseURL '+BaseURL);
+        amount = paymentIntents[0].Athrz_Amount__c;
+        accountId = paymentIntents[0].Athrz_Account__c;
         pageUrl = 'https://adisols-dev-developer-edition.ap27.force.com'+ApexPages.currentPage().getURL();
         System.debug('url='+pageUrl);
         isCreditcard = true; 
     } 
 
     public void initPage() {
-        paymentRequests = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
+        paymentIntents = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
         pageUrl = 'https://adisols-dev-developer-edition.ap27.force.com'+ApexPages.currentPage().getURL();
         System.debug('url='+pageUrl);
         isCreditcard = true;
@@ -33,10 +35,17 @@ public class PaymentFormController {
         System.debug('method of payment'+selectedMethod);
         // PaymentFormController paymentController = new PaymentFormController();
         isCreditcard = selectedMethod == 'cc' ? true :false;
-        amount = isCreditcard ? (paymentRequests[0].Amount__c * (1.0399)).setScale(2) : (paymentRequests[0].Amount__c).setScale(2);
-        if(paymentRequests.size() > 0) {
-            System.debug('payment'+paymentRequests);
-            String body = hostedPageRequest(paymentRequests[0]);
+        amount = isCreditcard ? (paymentIntents[0].Athrz_Amount__c * (1.0399)).setScale(2) : (paymentIntents[0].Athrz_Amount__c).setScale(2);
+        if(paymentIntents.size() > 0) {
+            System.debug('payment'+paymentIntents);
+
+            SYS_DataCache.INT_TYPE = 'Authorize';
+            SYS_DataCache.OBJ_TYPE = 'Payment_Intent';
+            SYS_ApplicationService appService = (SYS_ApplicationService)Type.forName(SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).ApexHandler__c).newInstance();
+            
+
+            String body = appService.transformSObjectToJson(paymentIntents).values()[0];
+            // String body = hostedPageRequest(paymentIntents[0]);
 
             String temp = submitFormRequest(body);
             System.debug('token-is'+temp);
@@ -126,7 +135,7 @@ public class PaymentFormController {
      * // PaymentFormController.hostedPageRequest(getPaymentRequestByGroupId('xwaiu-nvaeiln-sdfalkvnlnace')[0]);
      */
 
-
+/**
     public String hostedPageRequest(PaymentRequest__c paymentReq) {
         String result;
         System.debug(paymentReq.Amount__c);
@@ -213,15 +222,17 @@ public class PaymentFormController {
         System.debug('test'+result);
 
         return result;
-    }
+    } */
 
     public String submitFormRequest(String body) {
         String tokenKey;
         SYS_IntegrationLog__c integrationLog = new SYS_IntegrationLog__c();
+        IntegrationSetting__mdt integrationSetting = SYS_DataCache.integrationSetting.get(SYS_Datacache.INT_TYPE);
+        String baseEndpoint = integrationSetting.BaseAPIEndPoint__c;
 
         Http http = new Http();
         HttpRequest req = new HttpRequest();
-        req.setEndpoint('https://apitest.authorize.net/xml/v1/request.api');
+        req.setEndpoint(baseEndpoint);
         req.setMethod('POST');
         req.setBody(body);
 
@@ -280,37 +291,27 @@ public class PaymentFormController {
         return result;
     }
 
-    public List<PaymentRequest__c> getPaymentRequestByGroupId(String uuid) {
+    public List<Payment_Intent__c> getPaymentRequestByGroupId(String uuid) {
         return [SELECT Id,
-                    Email__c,
-                    Contact__c,
-                    Contact__r.Id,
-                    Contact__r.Name,
-                    Account__c,
-                    Account__r.Id,
-                    Account__r.Name,
-                    Account__r.AccountNumber,
-                    Account__r.email__c,
-                    Account__r.Profile_Id__c,
-                    Account__r.BillingStreet,
-                    Account__r.BillingCity,
-                    Account__r.BillingPostalCode,
-                    Account__r.BillingCountry,
-                    Account__r.BillingState,
-                    Opportunity__c,
-                    Opportunity__r.Id,
-                    Opportunity__r.Name,
+                    Athrz_Email__c,
+                    Athrz_Account__c,
+                    Athrz_Account__r.Id,
+                    Athrz_Account__r.Name,
+                    Athrz_Account__r.AccountNumber,
+                    Athrz_Account__r.email__c,
+                    Athrz_Account__r.Profile_Id__c,
+                    Athrz_Account__r.BillingStreet,
+                    Athrz_Account__r.BillingCity,
+                    Athrz_Account__r.BillingPostalCode,
+                    Athrz_Account__r.BillingCountry,
+                    Athrz_Account__r.BillingState,
                     Status__c,
-                    Status_Message__c,
-                    Currency_Code__c,
-                    PaymentType__c,
-                    Amount__c,
-                    ItemNumber__c,
-                    Payment_Reference_Id__c,
-                    Frequency__c,
-                    FirstChargeDate__c,
-                    PaymentRequests__c
-                FROM PaymentRequest__c WHERE uuid__c = :uuid ];
+                    Athrz_Currency_Code__c,
+                    Athrz_PaymentType__c,
+                    Athrz_Amount__c,
+                    Athrz_Reference_Id__c,
+                    Athrz_First_Charge_Date__c 
+                FROM Payment_Intent__c WHERE athrz_uuid__c = :uuid ];
     }
 
     public String getHostedPageRequest(PaymentRequest__c paymentReq) {

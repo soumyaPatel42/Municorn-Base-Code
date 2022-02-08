@@ -419,3 +419,7 @@ input[type=text]::placeholder {
 .payment-label {
     font-weight: bold;
 }
+
+.slds-input {
+    margin: 8px 0;
+}
