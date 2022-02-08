@@ -20,6 +20,18 @@ public class SYS_DataCache {
         
     }
 
+    private static Map<String,ObjectSetting__mdt> objectSettingsMapVar;
+    public static Map<String,ObjectSetting__mdt> objectSettingsMap{
+        get{
+            if(objectSettingsMapVar == NULL){
+                objectSettingsMapVar = ObjectSetting__mdt.getAll();
+            }
+            return objectSettingsMapVar;
+        }
+ 
+    }
+
+
 
     //Extension for Webhook extension
     private static String extension;
@@ -46,7 +58,8 @@ public class SYS_DataCache {
     }
     
     //TODO - HB -  Fill the objectsettings 
-    private static ObjectSetting__mdt objectSetting; 
+    private static ObjectSetting__mdt objectSetting;
+
     
     //TODO - 'Account' is hardcoded
     private static String context;
