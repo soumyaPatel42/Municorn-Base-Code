@@ -204,10 +204,93 @@ public virtual class SYS_Transformer {
         return jsonMap;
     }
 
+    //Pass the list of fieldSettings having child keys in order (mappings)
+    public static void addChildsToGenerator(JSONGenerator gen, sObject obj , List<FieldSetting__mdt> mappings, Map<Id, Map<String, List<sObject>>> parentChildObjMap) {
+        String objId = (String)obj.get('Id');
+        String childObjectName = mappings[0].ObjectApiName__c;
+        String rootKey = mappings[0].ChildRootElement__c;
+        Map<String, FieldSetting__mdt> mapKeyToSetting = new Map<String, FieldSetting__mdt>();
+        List<String> keys = new List<String>();
+
+        for(FieldSetting__mdt setting : mappings) {
+            if(setting.Key__c != null) {
+                keys.add(setting.Key__c);
+                mapKeyToSetting.put(setting.Key__c, setting);
+            }
+        }
+
+        if(parentChildObjMap.get(objId) != null && parentChildObjMap.get(objId).get(childObjectName).size() > 0) {
+            
+            System.debug('hbdebug getRequestJsonSingle child - '+ childObjectName);
+            // gen.writeStartObject(); 
+            gen.writeFieldName(rootKey);
+            gen.writeStartArray(); gen.writeStartObject();
+        
+            for(sObject childObj : parentChildObjMap.get(objId).get(childObjectName)) {
+                for(Integer i = 0; i < keys.size(); i++) {
+            
+                    List<String> splitKeys = keys[i].split('\\.');
+                    Boolean endObj = true;
+        
+                    if(mapKeyToSetting.get(keys[i]).IsChild__c) {
+                        List<String> rootkeys = mapKeyToSetting.get(keys[i]).ChildRootElement__c.split('\\.');
+                        
+                        //Call new method
+                    }
+                    
+                    for(integer j = 0 ; j < splitKeys.size(); j++) {
+                        
+                        if(i == 0) {
+                            if(j == (splitKeys.size()-1)) {
+                                // gen.writeStartObject();
+                                // gen.writeStringField(splitKeys[j], objValue); 
+                                addValueToGenerator(gen, childObj, mapKeyToSetting.get(keys[i]), splitKeys[j]);
+                                // gen.writeStartObject();
+                                continue;
+                            }
+                            // gen.writeStartObject();
+                            gen.writeFieldName(splitKeys[j]); gen.writeStartObject();
+        
+                        } else if(keys[i-1].contains(splitKeys[j])) {
+                            continue;
+                        } else if(!(keys[i-1].contains(splitKeys[j]))) {
+                            // System.debug('diff'+(keys[i-1].split('\\.').size() - j));
+        
+                            if((keys[i-1].split('\\.').size() - splitKeys.size()) < 0 && (splitKeys.size() - 1) != j ) {
+                                // System.debug('current count higher');
+                                gen.writeFieldName(splitKeys[j]);gen.writeStartObject();
+                            } else {
+                                if(endObj) {
+                                    for(integer itr = 1; itr < (keys[i-1].split('\\.').size() - j); itr++) {
+                                        gen.writeEndObject();
+                                    }
+                                    endObj = false;
+                                }
+                                if(j == (splitKeys.size() - 1)) {
+                                    // gen.writeStringField(splitKeys[j], objValue);
+                                    addValueToGenerator(gen, childObj, mapKeyToSetting.get(keys[i]), splitKeys[j]);
+                                } else {
+                                    gen.writeFieldName(splitKeys[j]);gen.writeStartObject();
+                                }
+                            }
+                        }                     
+                    }
+                }
+            }
+            System.debug('len '+keys[keys.size()-1].split('\\.').size());
+            for(integer itr = 0; itr < keys[keys.size()-1].split('\\.').size() ; itr++) {
+                gen.writeEndObject();
+            }
+            gen.writeEndObject();
+            gen.writeEndArray();
+        }
+    }
+
     public static String getRequestJsonSingleOrdered(Boolean considerChild,sObject obj , List<FieldSetting__mdt> mappings, Map<Id, Map<String, List<sObject>>> mapVal) {
         String jsonBody;
         List<String> keys = new List<String>();
         Map<String, FieldSetting__mdt> mapKeyToSetting = new Map<String, FieldSetting__mdt>();
+
         for(FieldSetting__mdt setting : mappings) {
             if(setting.Key__c != null) {
                 keys.add(setting.Key__c);
@@ -219,51 +302,60 @@ public virtual class SYS_Transformer {
         for(Integer i = 0; i < keys.size(); i++) {
             
             List<String> splitKeys = keys[i].split('\\.');
-            System.debug('len'+keys[i]);
             Boolean endObj = true;
+            List<FieldSetting__mdt> childSettings = new List<FieldSetting__mdt>();
+
+            if(mapKeyToSetting.get(keys[i]).IsChild__c) {
+
+                List<String> rootkeys = mapKeyToSetting.get(keys[i]).ChildRootElement__c.split('\\.');
+                childSettings.add(mapKeyToSetting.get(keys[i]));
+                if(i > 0) {
+                    System.debug('end brack '+(keys[i-1].split('\\.').size()));
+                    for(integer itr = 1; itr < (keys[i-1].split('\\.').size()); itr++) {
+                        gen.writeEndObject();
+                    }
+                }
+                addChildsToGenerator(gen, obj, childSettings, mapVal, );
+                continue;
+                //Call new method
+            } else if(!childSettings.isEmpty()) {
+                addChildsToGenerator(gen, obj, childSettings, mapVal);
+                childSettings = new List<FieldSetting__mdt>(); 
+            }
+            
             for(integer j = 0 ; j < splitKeys.size(); j++) {
-                String objValue = getFieldValues(obj, mapKeyToSetting.get(keys[i]), mapKeyToSetting.get(keys[i]).FieldApiName__c ) != null ?
-                                    String.valueOf(getFieldValues(obj, mapKeyToSetting.get(keys[i]), mapKeyToSetting.get(keys[i]).FieldApiName__c )) :
-                                    '';
-                system.debug('loop '+j);
+                
                 if(i == 0) {
+                    
                     if(j == (splitKeys.size()-1)) {
                         gen.writeStartObject();
-                        gen.writeStringField(splitKeys[j], objValue); 
-
-                        //getFieldValues(sObject obj, FieldSetting__mdt mapping, String fieldAPIName)
-                        System.debug('gen.writeStartObject');
-                        System.debug('gen.writeStringField '+objValue);
+                        // gen.writeStringField(splitKeys[j], objValue); 
+                        addValueToGenerator(gen, obj, mapKeyToSetting.get(keys[i]), splitKeys[j]);
                         continue;
                     }
                     gen.writeStartObject();
                     gen.writeFieldName(splitKeys[j]);
-                    System.debug('gen.writeStartObject');
-                    System.debug('gen.writeFieldName '+splitKeys[j]);
-                    
 
                 } else if(keys[i-1].contains(splitKeys[j])) {
                     continue;
                 } else if(!(keys[i-1].contains(splitKeys[j]))) {
-                    System.debug('diff'+(keys[i-1].split('\\.').size() - j));
+                    // System.debug('diff'+(keys[i-1].split('\\.').size() - j));
+
                     if((keys[i-1].split('\\.').size() - splitKeys.size()) < 0 && (splitKeys.size() - 1) != j ) {
-                        System.debug('current count higher');
+                        // System.debug('current count higher');
                         gen.writeFieldName(splitKeys[j]);gen.writeStartObject();
-                        System.debug('gen.writeFieldName '+splitKeys[j]);System.debug('gen.writeStartObject');
                     } else {
                         if(endObj) {
                             for(integer itr = 1; itr < (keys[i-1].split('\\.').size() - j); itr++) {
                                 gen.writeEndObject();
-                                System.debug('gen.writeEndObject()');
                             }
                             endObj = false;
                         }
                         if(j == (splitKeys.size() - 1)) {
-                            gen.writeStringField(splitKeys[j], objValue);
-                            System.debug('gen.writeStringField '+objValue);
+                            // gen.writeStringField(splitKeys[j], objValue);
+                            addValueToGenerator(gen, obj, mapKeyToSetting.get(keys[i]), splitKeys[j]);
                         } else {
                             gen.writeFieldName(splitKeys[j]);gen.writeStartObject();
-                            System.debug('gen.writeFieldName '+splitKeys[j]);System.debug('gen.writeStartObject');
                         }
                     }
                 }                     
@@ -273,6 +365,21 @@ public virtual class SYS_Transformer {
         jsonBody = gen.getAsString();
         System.debug('jsonBody'+jsonBody);
         return jsonBody;
+    }
+
+    
+
+    public static void addValueToGenerator(JSONGenerator gen, sObject obj, FieldSetting__mdt mapping, String key) {
+        String fieldMappingHandler = 'SYS_ApplicationService';
+        if(mapping.Field_Mapping_Handler__c != '' && mapping.Field_Mapping_Handler__c != NULL){
+            fieldMappingHandler = mapping.Field_Mapping_Handler__c;
+        }
+
+        SYS_ApplicationService appService = (SYS_ApplicationService)Type.forName(fieldMappingHandler).newInstance();
+
+        Object value = appService.getFieldValues(obj, mapping, mapping.FieldApiName__c);
+        gen.writeObjectField(key, value);
+        
     }
 
     public static Map<String, Object> getRequestJsonSingle(Boolean considerChild,sObject obj , List<FieldSetting__mdt> mappings, Map<Id, Map<String, List<sObject>>> mapVal) {
