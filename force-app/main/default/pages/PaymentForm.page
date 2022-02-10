@@ -21,9 +21,13 @@
 
           <!-- RESPONSIVE GRID EXAMPLE -->
           <div class="myapp">
+            
             <div class="slds-grid slds-wrap">
               <div class="slds-col slds-size--1-of-1 slds-small-size--1-of-2 slds-medium-size--2-of-4">
+                
                 <div class="slds-box slds-box_x-small slds-text-align_center slds-m-around--x-small">
+                    <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around--x-small">Invoice Number:</div>
+                        <br/>
                     <div id='table-cc' class="invoice-table">
                         <div class="container">
                             <div class="container">
@@ -82,14 +86,14 @@
                 <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-4 ">
                     <div class="slds-box slds-box_x-small slds-text-align_center slds-m-around--x-small">
                         <div class="slds-button-group slds-text-align_center" >
-                            <button class="slds-button slds-button_brand">Credit Card</button>
+                            <button class="slds-button slds-button_brand ">Credit Card</button>
                             <button class="slds-button slds-button_neutral">Bank Payment</button>
                         </div>
                     </div>
                 </div>
                 <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-4 ">
                     <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around--x-small">
-                        <div class="slds-text-heading_small slds-text-align_center">Billing Information</div>
+                        <div class="slds-text-heading_small slds-text-align_center">{!$Label.Billing_Information}</div>
                         <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
                             <input type="text" id="payment-street" placeholder="Address" required="" class="slds-input" />
                         </div>
@@ -113,20 +117,44 @@
                     </div>
                 </div>
                 <div class="slds-col slds-size_1-of-1 slds-large-size_2-of-4">
-                    <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around--x-small">
-                        <div class="slds-text-heading_small slds-text-align_center">Payment Information</div>
-                        <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
-                            <input type="text" id="payment-credit-card-holder-name" placeholder="Name on Card" required="" class="slds-input" />
-                        </div>
-                        <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
-                            <input type="text" id="payment-credit-card-number" placeholder="Card Number" required="" class="slds-input" />
-                        </div>
-                        <div class="slds-grid slds-wrap">
-                            <div class="slds-form-element__control slds-col slds-size_1-of-2 slds-p-around_x-small">
-                                <input type="text" id="payment-credit-card-expiry" placeholder="MM/YY" required="" class="slds-input" />
+                    <div class = "credit-card-view"> 
+                        <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around--x-small">
+                            <div class="slds-text-heading_small slds-text-align_center">{!$Label.Payment_Information}</div>
+                            <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                                <input type="text" id="payment-credit-card-holder-name" placeholder="Name on Card" required="" class="slds-input" />
                             </div>
-                            <div class="slds-form-element__control slds-col slds-size_1-of-2 slds-p-around_x-small">
-                                <input type="text" id="payment-credit-card-cvv" placeholder="CVV" required="" class="slds-input" />
+                            <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                                <input type="text" id="payment-credit-card-number" placeholder="Card Number" required="" class="slds-input" />
+                            </div>
+                            <div class="slds-grid slds-wrap">
+                                <div class="slds-form-element__control slds-col slds-size_1-of-2 slds-p-around_x-small">
+                                    <input type="text" id="payment-credit-card-expiry" placeholder="MM/YY" required="" class="slds-input" />
+                                </div>
+                                <div class="slds-form-element__control slds-col slds-size_1-of-2 slds-p-around_x-small">
+                                    <input type="text" id="payment-credit-card-cvv" placeholder="CVV" required="" class="slds-input" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class = "bank-payment-view"> 
+                        <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around--x-small">
+                            <div class="slds-text-heading_small slds-text-align_center">{!$Label.Payment_Information}</div>
+                            <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                                <input type="text" id="payment-bank-holder-name" placeholder="Name on Account" required="" class="slds-input" />
+                            </div>
+                            <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                                <input type="text" id="payment-bank-number" placeholder="Account Number" required="" class="slds-input" />
+                            </div>
+                            <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                                <input type="text" id="payment-bank-routing-number" placeholder="Routing Number" required="" class="slds-input" />
+                            </div>
+                            <div class="slds-grid slds-wrap">
+                                <div class="slds-form-element__control slds-col slds-size_1-of-2 slds-p-around_x-small">
+                                    <input type="text" id="payment-bank-name" placeholder="Bank Name" required="" class="slds-input" />
+                                </div>
+                                <div class="slds-form-element__control slds-col slds-size_1-of-2 slds-p-around_x-small">
+                                    <input type="text" id="payment-bank-type" placeholder="Bank Type" required="" class="slds-input" />
+                                </div>
                             </div>
                         </div>
                     </div>
