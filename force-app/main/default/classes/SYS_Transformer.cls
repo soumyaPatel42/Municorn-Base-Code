@@ -315,7 +315,7 @@ public virtual class SYS_Transformer {
                         gen.writeEndObject();
                     }
                 }
-                addChildsToGenerator(gen, obj, childSettings, mapVal, );
+                addChildsToGenerator(gen, obj, childSettings, mapVal);
                 continue;
                 //Call new method
             } else if(!childSettings.isEmpty()) {
