@@ -56,10 +56,10 @@ public class ProcessTransactionWebhook implements Queueable, Database.AllowsCall
                 System.debug('#### resp: '+resp.getBody());
 
                 if(resp.getStatusCode() == 200) {
-                    List<sObject> upsertTrans = SYS_ApexHandler.getSingleSobjectsToUpsert_QB(resp.getBody().replace('\uFEFF', ''), 'transaction');
+                    List<sObject> upsertTrans = new List<sObject>{Schema.getGlobalDescribe().get('Account').newSObject()};//SYS_ApexHandler.getSingleSobjectsToUpsert_QB(resp.getBody().replace('\uFEFF', ''), 'transaction');
                     paymentRequestId = (String)upsertTrans[0].get('PaymentRequestId__c');
                     
-
+                    
                     // upsert upsertTrans;
                     // List<Database.UpsertResult> results = Database.upsert(upsertTrans, Schema.getGlobalDescribe().get('Transaction__c').getDescribe().fields.getMap().get('Transaction_Id__c'), false);
                     // for(Database.UpsertResult result : results){ 
@@ -80,7 +80,7 @@ public class ProcessTransactionWebhook implements Queueable, Database.AllowsCall
                         Status__c = 'payment_done'
                     );
                     
-                    List<sObject> upsertMethod = SYS_ApexHandler.getSingleSobjectsToUpsert_QB(resp.getBody().replace('\uFEFF', ''), 'paymentMethod');
+                    List<sObject> upsertMethod = new List<sObject>{Schema.getGlobalDescribe().get('Account').newSObject()};//SYS_ApexHandler.getSingleSobjectsToUpsert_QB(resp.getBody().replace('\uFEFF', ''), 'paymentMethod');
                     upsertMethod[0].put('Account__c', getAccountId(paymentRequestId));
                     // List<Database.UpsertResult> resultsUpsert = Database.upsert(upsertMethod, Schema.getGlobalDescribe().get('Payment_Method__c').getDescribe().fields.getMap().get('Profile_Id__c'), false);
                     // for(Database.UpsertResult result : resultsUpsert){ 

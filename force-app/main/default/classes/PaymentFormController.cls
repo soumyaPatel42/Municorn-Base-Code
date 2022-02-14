@@ -1,6 +1,17 @@
 public class PaymentFormController {
 
-    public List<Payment_Intent__c> paymentIntents { get; set; }
+    public Payment_Intent__c paymentIntent { get; set; }
+    public String apiLoginId {get; set;}
+    public String apiPublicKey {get; set;}
+    public String paymentToken {get; set;}
+    public String street {get; set;}
+    public String city {get; set;}
+    public String state {get; set;}
+    public String zipcode {get; set;}
+    public String country {get; set;}
+    public String email {get; set;}
+    public String accountName {get; set;}
+
     public String pageUrl {get; set;}
     public Boolean isCreditcard {get; set;}
     public String pageToken {get; set;}
@@ -12,47 +23,256 @@ public class PaymentFormController {
     
 
     public PaymentFormController() {
-        paymentIntents = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
+        
         string BaseURL = ApexPages.currentPage().getHeaders().get('Host');
         System.debug('BaseURL '+BaseURL);
-        amount = paymentIntents[0].Athrz_Amount__c;
-        accountId = paymentIntents[0].Athrz_Account__c;
-        pageUrl = 'https://adisols-dev-developer-edition.ap27.force.com'+ApexPages.currentPage().getURL();
-        System.debug('url='+pageUrl);
+        
         isCreditcard = true; 
     } 
 
     public void initPage() {
-        paymentIntents = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
-        pageUrl = 'https://adisols-dev-developer-edition.ap27.force.com'+ApexPages.currentPage().getURL();
-        System.debug('url='+pageUrl);
-        isCreditcard = true;
-        pageToken = 'some random'; 
-        // getToken();
+        paymentIntent = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
+        
+        apiLoginId = paymentIntent.Payment_Gateway__r.Athrz_Api_Login_Id__c;
+        apiPublicKey = paymentIntent.Payment_Gateway__r.Athrz_Public_Client_Key__c;
+
+        amount = paymentIntent.Athrz_Amount__c;
+        accountId = paymentIntent.Athrz_Account__c;
+        street = paymentIntent.Athrz_Account__r.BillingStreet;
+        city = paymentIntent.Athrz_Account__r.BillingCity;
+        state = paymentIntent.Athrz_Account__r.BillingState;
+        zipcode = paymentIntent.Athrz_Account__r.BillingPostalCode;
+        country = paymentIntent.Athrz_Account__r.BillingCountry;
+        email = paymentIntent.Athrz_Email__c;
+        accountName = paymentIntent.Athrz_Account__r.Name;
     }
 
-    public void getToken() {
-        System.debug('method of payment'+selectedMethod);
-        // PaymentFormController paymentController = new PaymentFormController();
-        isCreditcard = selectedMethod == 'cc' ? true :false;
-        amount = isCreditcard ? (paymentIntents[0].Athrz_Amount__c * (1.0399)).setScale(2) : (paymentIntents[0].Athrz_Amount__c).setScale(2);
-        if(paymentIntents.size() > 0) {
-            System.debug('payment'+paymentIntents);
+    public void charge() {
+        System.debug('token is '+paymentToken+' credit card'+isCreditcard);
+        Decimal total = amount;
+        if(isCreditcard) {
+            total = (amount * 1.0399).setScale(2);
+        }
 
+        paymentIntent.Athrz_Amount__c = total;
+        paymentIntent.Athrz_Data_Value__c = paymentToken;
+        try {
+            // update paymentIntent;
+            
+            String recordId = paymentIntent.Id;
             SYS_DataCache.INT_TYPE = 'Authorize';
             SYS_DataCache.OBJ_TYPE = 'Payment_Intent';
+            List<Payment_Intent__c> newList = [select id from Payment_Intent__c where id = :recordId];
             SYS_ApplicationService appService = (SYS_ApplicationService)Type.forName(SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).ApexHandler__c).newInstance();
+                    
+            Map<Id, String> jsonListForOutbound = appService.transformSObjectToJson(newList);
+            String requestBody = jsonListForOutbound.get(recordId).replace('##token##', paymentToken).replace('##amount##', String.valueOf(total));
+            chargePayment(requestBody);
+
+            update paymentIntent;
+        } catch(Exception e) {
+            System.debug(e.getMessage());
+        }
+        // String token = apexpages.currentPage().getParameters().get('token');
+        // System.debug('toekn '+token);
+    }
+
+    public void chargePayment(String requestBody) {
+        Http http = new Http();
+        HttpRequest req = new HttpRequest();
+        String reqbody = requestBody;
+        String endPoint = paymentIntent.Payment_Gateway__r.Athrz_Base_Endpoint__c;
+        SYS_ApplicationService appService = new SYS_ApplicationService();
+        SYS_DataCache.INT_TYPE = 'Authorize';
+                
+        req.setEndpoint(endPoint);
+        req.setMethod('POST');
+        req.setBody(reqbody);
+
+        HttpResponse resp = http.send(req);
+        System.debug('#### resp2 status: '+resp.getStatus());
+        System.debug('#### resp2 code: '+resp.getStatusCode());
+        System.debug('#### resp2: '+resp.getBody());
+        if(resp.getStatusCode() == 200) {
+            String fixedString = EncodingUtil.convertFromHex(
+                                    EncodingUtil.convertToHex(resp.getBodyAsBlob())
+                                        .removeStart('feff').removeStart('fffe')
+                                    ).toString();
+            SYS_IntegrationLog__c integrationLog = SYS_integrationLogHandler.getLogsToInsert(resp.getBody().replace('\uFEFF', '')); // TODO - Integartionlog handler SYS_integrationLogHandler
+            integrationLog.Type__c = 'INBOUND';
+            integrationLog.SYS_Operation_Type__c = 'INSERT';
+            integrationLog.Status__c = 'DONE';
+            integrationLog.SYS_IntegrationSettings__c = 'Authorize';
+            integrationLog.Entity_Name__c = 'Transaction__c';
+            integrationLog.How_to_process__c = 'ignore_log';
             
+            List<sObject> sObjectsToDML = appService.transformJsonToSObject(resp.getBody().replace('\uFEFF', ''),'transaction-resp');
+            String transactionId = (String)sObjectsToDML[0].get('Transaction_Id__c');
+            System.debug('transaction '+transactionId);
 
-            String body = appService.transformSObjectToJson(paymentIntents).values()[0];
-            // String body = hostedPageRequest(paymentIntents[0]);
+            if(transactionId != null) {
+                reqbody =  getTransactionRequest(transactionId);
+                
+                req.setEndpoint('https://apitest.authorize.net/xml/v1/request.api');
+                req.setMethod('GET');
+                req.setBody(reqbody);
 
-            String temp = submitFormRequest(body);
-            System.debug('token-is'+temp);
-            pageToken = temp;
-            System.debug('page-token='+pageToken);
+                resp = http.send(req);
+                System.debug('#### resp status: '+resp.getStatus());
+                System.debug('#### resp code: '+resp.getStatusCode());
+                System.debug('#### resp: '+resp.getBody());
+
+                if(resp.getStatusCode() == 200) {
+                    List<sObject> upsertTrans = appService.transformJsonToSObject(resp.getBody().replace('\uFEFF', ''), 'transaction');
+                    String paymentRequestId = (String)upsertTrans[0].get('Payment_Intent__c');
+                    
+                    Payment_Intent__c paymentReq = new Payment_Intent__c(
+                        Id = paymentRequestId,
+                        Status__c = 'payment_done'
+                    );
+                    
+                    List<sObject> upsertMethod = appService.transformJsonToSObject(resp.getBody().replace('\uFEFF', ''), 'paymentMethod');
+                    
+                    //New changes 
+                    
+                    reqbody =  getTransactionRequest(transactionId);
+                            
+                    req.setEndpoint('https://apitest.authorize.net/xml/v1/request.api');
+                    req.setMethod('GET');
+                    req.setBody(reqbody);
+
+                    HttpResponse resp0 = http.send(req);
+                    System.debug('#### resp0 status: '+resp0.getStatus());
+                    System.debug('#### resp0 code: '+resp0.getStatusCode());
+                    System.debug('#### resp0: '+resp0.getBody());
+                    
+                    reqbody = SYS_integrationLogHandler.getProfileFromTransaction(transactionId);
+                    req.setMethod('POST');
+                    req.setBody(reqbody);
+
+                    HttpResponse resp2 = http.send(req);
+                    System.debug('#### resp2 status: '+resp2.getStatus());
+                    System.debug('#### resp2 code: '+resp2.getStatusCode());
+                    System.debug('#### resp2: '+resp2.getBody());
+
+                    Map<String, Object> profileMap = (Map<String, Object>)JSON.deserializeUntyped(resp2.getBody().replace('\uFEFF', ''));
+                    String profileId = (String)profileMap.get('customerProfileId');
+
+                    reqbody = SYS_integrationLogHandler.getProfileDetails(profileId, accountId);
+                    req.setMethod('GET');
+                    req.setBody(reqbody);
+
+                    HttpResponse resp3 = http.send(req);
+                    System.debug('#### resp3 status: '+resp3.getStatus());
+                    System.debug('#### resp3 code: '+resp3.getStatusCode());
+                    System.debug('#### resp3: '+resp3.getBody());
+
+                    List<Database.UpsertResult> results = Database.upsert(upsertTrans, Schema.getGlobalDescribe().get('Transaction__c').getDescribe().fields.getMap().get('Transaction_Id__c'), false);
+                    for(Database.UpsertResult result : results){ 
+                        if(result.isSuccess()){
+                            SYS_debug.log('Transaction update success'+result.getId());
+                        } else {
+                            SYS_debug.log('Insertion error Transaction occured.');
+                            for(Database.Error err : result.getErrors()) {
+                                SYS_debug.log('The following error has occurred.');                    
+                                SYS_debug.log(err.getStatusCode() + ': ' + err.getMessage());
+                                SYS_debug.log('Fields affected are: ' + err.getFields());
+                            }
+                        }
+                    }
+
+                    List<Database.UpsertResult> resultsUpsert = Database.upsert(upsertMethod, Schema.getGlobalDescribe().get('Payment_Method__c').getDescribe().fields.getMap().get('Profile_Id__c'), false);
+                    for(Database.UpsertResult result : resultsUpsert){ 
+                        if(result.isSuccess()){
+                            SYS_debug.log('Payment Method update success'+result.getId());
+                        } else {
+                            SYS_debug.log('Insertion error Payment Method occured.');
+                            for(Database.Error err : result.getErrors()) {
+                                SYS_debug.log('The following error has occurred.');                    
+                                SYS_debug.log(err.getStatusCode() + ': ' + err.getMessage());
+                                SYS_debug.log('Fields affected are: ' + err.getFields());
+                            }
+                        }
+                    }
+
+                    update paymentReq;
+                    
+                }
+
+            }
+
+            insert integrationLog;
+
         }
     }
+
+    public static String getTransactionRequest(String transId) {
+
+        JSONGenerator gen = JSON.createGenerator(true);
+        gen.writeStartObject();
+        gen.writeFieldName('getTransactionDetailsRequest'); gen.writeStartObject();
+        gen.writeFieldName('merchantAuthentication'); gen.writeStartObject();
+        gen.writeStringField('name', '84vMVmF6jP');
+        gen.writeStringField('transactionKey', '42Xr3CAw9k83jzu6');
+        gen.writeEndObject();
+        // gen.writeStringField('refId', );
+        gen.writeStringField('transId', transId);
+        gen.writeEndObject();
+        gen.writeEndObject();
+
+        return gen.getAsString();
+    }
+
+    public Payment_Intent__c getPaymentRequestByGroupId(String uuid) {
+        return [SELECT Id,
+                    Athrz_Email__c,
+                    Athrz_Account__c,
+                    Athrz_Account__r.Id,
+                    Athrz_Account__r.Name,
+                    Athrz_Account__r.AccountNumber,
+                    Athrz_Account__r.email__c,
+                    Athrz_Account__r.Profile_Id__c,
+                    Athrz_Account__r.BillingStreet,
+                    Athrz_Account__r.BillingCity,
+                    Athrz_Account__r.BillingPostalCode,
+                    Athrz_Account__r.BillingCountry,
+                    Athrz_Account__r.BillingState,
+                    Status__c,
+                    Athrz_Currency_Code__c,
+                    Athrz_PaymentType__c,
+                    Athrz_Amount__c,
+                    Athrz_Reference_Id__c,
+                    Athrz_First_Charge_Date__c,
+                    Payment_Gateway__r.Athrz_Api_Login_Id__c,
+                    Payment_Gateway__r.Athrz_Base_Endpoint__c,
+                    Payment_Gateway__r.Athrz_Public_Client_Key__c
+                FROM Payment_Intent__c WHERE athrz_uuid__c = :uuid LIMIT 1];
+    }
+    
+    /*************** TRASH CODE ****************/
+
+    // public void getToken() {
+    //     System.debug('method of payment'+selectedMethod);
+    //     // PaymentFormController paymentController = new PaymentFormController();
+    //     isCreditcard = selectedMethod == 'cc' ? true :false;
+    //     amount = isCreditcard ? (paymentIntent[0].Athrz_Amount__c * (1.0399)).setScale(2) : (paymentIntent[0].Athrz_Amount__c).setScale(2);
+    //     if(paymentIntent.size() > 0) {
+    //         System.debug('payment'+paymentIntent);
+
+    //         SYS_DataCache.INT_TYPE = 'Authorize';
+    //         SYS_DataCache.OBJ_TYPE = 'Payment_Intent';
+    //         SYS_ApplicationService appService = (SYS_ApplicationService)Type.forName(SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).ApexHandler__c).newInstance();
+            
+
+    //         String body = appService.transformSObjectToJson(paymentIntent).values()[0];
+    //         // String body = hostedPageRequest(paymentIntent[0]);
+
+    //         String temp = submitFormRequest(body);
+    //         System.debug('token-is'+temp);
+    //         pageToken = temp;
+    //         System.debug('page-token='+pageToken);
+    //     }
+    // }
 
     public void updateTransaction() {
         System.debug(response);
@@ -67,6 +287,7 @@ public class PaymentFormController {
         integrationLog.Status__c = 'DONE';
         integrationLog.SYS_IntegrationSettings__c = 'Authorize';
         integrationLog.Entity_Name__c = 'PaymentRequest__c';
+        integrationLog.How_to_process__c = 'ignore_log';
 
         
 
@@ -252,7 +473,7 @@ public class PaymentFormController {
             integrationLog.Status__c = 'DONE';
             integrationLog.SYS_IntegrationSettings__c = 'Authorize';
 
-            // insert integrationLog;
+            insert integrationLog;
 
             // JSON2Apex tokenObj = JSON2Apex.parse(resp.getBody().replace('\uFEFF', ''));
             // tokenKey = tokenObj.token;
@@ -262,15 +483,15 @@ public class PaymentFormController {
             //     tokenKey = (String)((Map<String, Object>)tokenMap).get('token');
             // }
 
-            JSONParser parser = JSON.createParser(resp.getBody().replace('\uFEFF', ''));
-            System.debug(parser.getText());
-            while (parser.nextToken() != null) {
-                if(parser.getCurrentName() == 'token') {
-                    tokenKey = parser.getText();
-                }
-                System.debug('kleys=='+parser.getText());
-                parser.nextToken();
-            }
+            // JSONParser parser = JSON.createParser(resp.getBody().replace('\uFEFF', ''));
+            // System.debug(parser.getText());
+            // while (parser.nextToken() != null) {
+            //     if(parser.getCurrentName() == 'token') {
+            //         tokenKey = parser.getText();
+            //     }
+            //     System.debug('kleys=='+parser.getText());
+            //     parser.nextToken();
+            // }
 
         }
         return tokenKey;
@@ -291,28 +512,7 @@ public class PaymentFormController {
         return result;
     }
 
-    public List<Payment_Intent__c> getPaymentRequestByGroupId(String uuid) {
-        return [SELECT Id,
-                    Athrz_Email__c,
-                    Athrz_Account__c,
-                    Athrz_Account__r.Id,
-                    Athrz_Account__r.Name,
-                    Athrz_Account__r.AccountNumber,
-                    Athrz_Account__r.email__c,
-                    Athrz_Account__r.Profile_Id__c,
-                    Athrz_Account__r.BillingStreet,
-                    Athrz_Account__r.BillingCity,
-                    Athrz_Account__r.BillingPostalCode,
-                    Athrz_Account__r.BillingCountry,
-                    Athrz_Account__r.BillingState,
-                    Status__c,
-                    Athrz_Currency_Code__c,
-                    Athrz_PaymentType__c,
-                    Athrz_Amount__c,
-                    Athrz_Reference_Id__c,
-                    Athrz_First_Charge_Date__c 
-                FROM Payment_Intent__c WHERE athrz_uuid__c = :uuid ];
-    }
+    
 
     public String getHostedPageRequest(PaymentRequest__c paymentReq) {
 
