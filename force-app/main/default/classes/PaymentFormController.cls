@@ -84,6 +84,7 @@ public class PaymentFormController {
         String endPoint = paymentIntent.Payment_Gateway__r.Athrz_Base_Endpoint__c;
         SYS_ApplicationService appService = new SYS_ApplicationService();
         SYS_DataCache.INT_TYPE = 'Authorize';
+        SYS_IntegrationLog__c paymentMethodsLog = new SYS_IntegrationLog__c();
                 
         req.setEndpoint(endPoint);
         req.setMethod('POST');
@@ -105,6 +106,7 @@ public class PaymentFormController {
             integrationLog.SYS_IntegrationSettings__c = 'Authorize';
             integrationLog.Entity_Name__c = 'Transaction__c';
             integrationLog.How_to_process__c = 'ignore_log';
+
             
             List<sObject> sObjectsToDML = appService.transformJsonToSObject(resp.getBody().replace('\uFEFF', ''),'transaction-resp');
             String transactionId = (String)sObjectsToDML[0].get('Transaction_Id__c');
@@ -120,7 +122,7 @@ public class PaymentFormController {
                 resp = http.send(req);
                 System.debug('#### resp status: '+resp.getStatus());
                 System.debug('#### resp code: '+resp.getStatusCode());
-                System.debug('#### resp: '+resp.getBody());
+                System.debug('#### get Transaction: '+resp.getBody());
 
                 if(resp.getStatusCode() == 200) {
                     List<sObject> upsertTrans = appService.transformJsonToSObject(resp.getBody().replace('\uFEFF', ''), 'transaction');
@@ -131,20 +133,32 @@ public class PaymentFormController {
                         Status__c = 'payment_done'
                     );
                     
-                    List<sObject> upsertMethod = appService.transformJsonToSObject(resp.getBody().replace('\uFEFF', ''), 'paymentMethod');
-                    
+                    // List<sObject> upsertMethod = appService.transformJsonToSObject(resp.getBody().replace('\uFEFF', ''), 'paymentMethod');
+                    // List<Database.UpsertResult> resultsUpsert = Database.upsert(upsertMethod, Schema.getGlobalDescribe().get('Payment_Method__c').getDescribe().fields.getMap().get('Profile_Id__c'), false);
+                    // for(Database.UpsertResult result : resultsUpsert){ 
+                    //     if(result.isSuccess()){
+                    //         SYS_debug.log('Payment Method update success'+result.getId());
+                    //     } else {
+                    //         SYS_debug.log('Insertion error Payment Method occured.');
+                    //         for(Database.Error err : result.getErrors()) {
+                    //             SYS_debug.log('The following error has occurred.');                    
+                    //             SYS_debug.log(err.getStatusCode() + ': ' + err.getMessage());
+                    //             SYS_debug.log('Fields affected are: ' + err.getFields());
+                    //         }
+                    //     }
+                    // }
                     //New changes 
                     
-                    reqbody =  getTransactionRequest(transactionId);
+                    // reqbody =  getTransactionRequest(transactionId);
                             
-                    req.setEndpoint('https://apitest.authorize.net/xml/v1/request.api');
-                    req.setMethod('GET');
-                    req.setBody(reqbody);
+                    // req.setEndpoint('https://apitest.authorize.net/xml/v1/request.api');
+                    // req.setMethod('GET');
+                    // req.setBody(reqbody);
 
-                    HttpResponse resp0 = http.send(req);
-                    System.debug('#### resp0 status: '+resp0.getStatus());
-                    System.debug('#### resp0 code: '+resp0.getStatusCode());
-                    System.debug('#### resp0: '+resp0.getBody());
+                    // HttpResponse resp0 = http.send(req);
+                    // System.debug('#### resp0 status: '+resp0.getStatus());
+                    // System.debug('#### resp0 code: '+resp0.getStatusCode());
+                    // System.debug('#### resp0: '+resp0.getBody());
                     
                     reqbody = SYS_integrationLogHandler.getProfileFromTransaction(transactionId);
                     req.setMethod('POST');
@@ -167,6 +181,18 @@ public class PaymentFormController {
                     System.debug('#### resp3 code: '+resp3.getStatusCode());
                     System.debug('#### resp3: '+resp3.getBody());
 
+                    paymentMethodsLog = SYS_ApplicationService.getLogsToInsert(resp3.getBody().replace('\uFEFF', ''));
+                    paymentMethodsLog.Status__c = 'NEW';
+                    paymentMethodsLog.Type__c = 'INBOUND';
+                    paymentMethodsLog.SYS_IntegrationSettings__c = SYS_DataCache.INT_TYPE;
+                    paymentMethodsLog.SYS_Operation_Type__c = 'UPSERT';
+                    paymentMethodsLog.whatid__c = accountId;
+                    paymentMethodsLog.Entity_Name__c = 'Account';
+                    paymentMethodsLog.How_to_process__c = 'use_object_setting';
+                    paymentMethodsLog.SYS_Http_Status__c = resp3.getStatusCode();
+                    paymentMethodsLog.ObjectSettingId__c = 'Athrz_Account';
+                    paymentMethodsLog.Resource__c = 'customer-profile';
+
                     List<Database.UpsertResult> results = Database.upsert(upsertTrans, Schema.getGlobalDescribe().get('Transaction__c').getDescribe().fields.getMap().get('Transaction_Id__c'), false);
                     for(Database.UpsertResult result : results){ 
                         if(result.isSuccess()){
@@ -181,19 +207,7 @@ public class PaymentFormController {
                         }
                     }
 
-                    List<Database.UpsertResult> resultsUpsert = Database.upsert(upsertMethod, Schema.getGlobalDescribe().get('Payment_Method__c').getDescribe().fields.getMap().get('Profile_Id__c'), false);
-                    for(Database.UpsertResult result : resultsUpsert){ 
-                        if(result.isSuccess()){
-                            SYS_debug.log('Payment Method update success'+result.getId());
-                        } else {
-                            SYS_debug.log('Insertion error Payment Method occured.');
-                            for(Database.Error err : result.getErrors()) {
-                                SYS_debug.log('The following error has occurred.');                    
-                                SYS_debug.log(err.getStatusCode() + ': ' + err.getMessage());
-                                SYS_debug.log('Fields affected are: ' + err.getFields());
-                            }
-                        }
-                    }
+                    
 
                     update paymentReq;
                     
@@ -202,6 +216,9 @@ public class PaymentFormController {
             }
 
             insert integrationLog;
+            SYS_DataCache.OBJ_TYPE = 'Athrz_Account';
+            SYS_DataCache.sObjectApiName = 'Account';
+            insert paymentMethodsLog;
 
         }
     }
@@ -296,7 +313,7 @@ public class PaymentFormController {
 
         Http http = new Http();
         HttpRequest req = new HttpRequest();
-        String reqbody =  ProcessTransactionWebhook.getTransactionRequest(transactionId);
+        String reqbody = ProcessTransactionWebhook.getTransactionRequest(transactionId);
                 
         req.setEndpoint('https://apitest.authorize.net/xml/v1/request.api');
         req.setMethod('GET');
