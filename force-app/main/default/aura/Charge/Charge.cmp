@@ -1,10 +1,13 @@
-<aura:component implements="force:appHostable,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickActionWithoutHeader" 
+<aura:component implements="force:appHostable,flexipage:availableForRecordHome,force:hasRecordId,force:hasSObjectName,force:lightningQuickActionWithoutHeader" 
     access="global" 
     controller="ChargeController">
 	<aura:attribute name="obj" type="Object"/>
     <aura:attribute name="contacts" type="Contact"/>
     <aura:attribute name="opportunities" type="Opportunity"/>
     <aura:attribute name="ShowTransactionDetails" type="boolean" default="false"/>
+    <aura:attribute name="ShowEmailConfirmation" type="boolean" default="false"/>
+    <aura:attribute name="ShowDefaultPage" type="boolean" default="true"/>
+    <aura:attribute name="EnableAddToCardButton" type="boolean" default="true"/>
     <aura:attribute name="Loading" type="boolean" default="true"/>
     <aura:attribute name="PayNow" type="boolean" default="true"/>
     <aura:attribute name="RecordType" type="string"/>
@@ -33,8 +36,8 @@
     <aura:attribute name="TxnDetailsColumns" type="List"/>
     <aura:attribute name="TxnDetailsData" type="List"/>
     <aura:attribute name="Txn" type="Object"/>
-    <aura:attribute name="StripeCardUILoading" type="boolean" default="true"/>
-    <aura:attribute name="StripeCardUI" type="String"/>
+    <aura:attribute name="CardUILoading" type="boolean" default="true"/>
+    <aura:attribute name="cardUrl" type="String"/>
     <aura:attribute name="PaymentMethodsLoading" type="boolean" default="true"/>
     <aura:attribute name="Properties" type="Map"/>
     <aura:attribute name="StripePublishableKey" type="String"/>
@@ -42,11 +45,11 @@
     <aura:attribute name="CheckoutItemsColumns" type="List"/>
     <aura:attribute name="CheckoutResponses" type="List"/>
     <aura:attribute name="PaymentRequestLabel" type="String"/>
-    <aura:attribute name="ShowEmailConfirmation" type="boolean" default="false"/>
-    <aura:attribute name="ShowDefaultPage" type="boolean" default="true"/>
-    <aura:attribute name="EnableAddToCardButton" type="boolean" default="true"/>
-    <aura:attribute name="selectedAccount" type="Object"/>
-    <aura:attribute name="currentPage" type="String" default="sc1"/>
+    
+    <aura:attribute name="selectedAccount" type="Object" />
+    <aura:attribute name="gateways" type="List" access="PRIVATE"/>
+    <aura:attribute name="selectedGateway" type="String" access="PRIVATE" />
+    <aura:attribute name="selectedRows" type="List" default="[]" />
 
     <aura:html tag="style">
         .cuf-content, .modal-body {
@@ -68,7 +71,28 @@
     </aura:html>
     <aura:handler name="init" action="{!c.doInit}" value="{!this}"/>
     <aura:handler event="force:refreshView" action="{!c.isRefreshed}"/>
-    
+    <force:recordData aura:id="recordLoader"
+                      recordId="{!v.recordId}"
+                      layoutType="FULL"
+                      targetFields="{!v.obj}"
+                      targetError="{!v.recordError}"
+                      recordUpdated="{!c.recordLoaded}"
+    />
+    <!-- <lightning:tabset selectedTabId="one">
+            <lightning:tab label="{!$Label.c.Payment_Details}" id="one">
+                <lightning:tabset variant="vertical">
+                    <lightning:tab label="{!$Label.c.credit_card}">
+                        test 1
+                        <iframe aura:id="CardUI" src="/apex/cardUI" onload="{!c.CardLoaded}" frameborder="0" width="100%" height="200"/>
+                    </lightning:tab>
+                    <lightning:tab label="{!$Label.c.bank}">
+                        test 2
+                        <iframe aura:id="CardUI" src="/apex/cardUI" onload="{!c.CardLoaded}" frameborder="0" width="100%" height="200"/>
+                    </lightning:tab>
+                </lightning:tabset>
+            </lightning:tab>
+    </lightning:tabset>  -->
+
     <div class="c-container slds-is-relative slds-grow slds-theme_default" style="min-height:250px;">
         <lightning:layoutItem>
             <aura:if isTrue="{!v.Loading}">
@@ -77,10 +101,17 @@
                 </div>
             </aura:if>
         </lightning:layoutItem>
-        <aura:if isTrue="{!v.currentPage == 'sc1'}">
+        <aura:if isTrue="{!v.ShowDefaultPage}">
+            
                 <lightning:layout multipleRows="true" class="charge-base-page">
                     <lightning:layoutItem padding="around-small" class="frequency-button-group-wrapper"
                                           flexibility="grow">
+                        <lightning:select name="gateway" label="Select payment gateway:" aura:id="payment-gateway" value="{!v.selectedGateway}"
+                            onchange="{!c.handleGatewayChange}">
+                            <aura:iteration items="{!v.gateways}" var="option">
+                                <option text="{!option.Name}" value="{!option.Id}" />
+                            </aura:iteration>
+                        </lightning:select>
                         <lightning:buttonGroup class="frequency-button-group">
                             <aura:iteration items="{!v.FrequencyOptions}" var="option">
                                 <lightning:buttonStateful labelWhenOff="{!option.label}"
@@ -136,16 +167,17 @@
                                     keyField="id"
                                     data="{!v.CheckoutItems}"
                                     columns="{!v.CheckoutItemsColumns}"
-                                    hideCheckboxColumn="true"
                                     oncellchange="{!c.handleInlineEditOfCheckoutItems}"
                                     suppressBottomBar="true"
+                                    maxRowSelection="1"
+                                    onrowselection="{! c.getSelectedName }"
                                     onrowaction="{!c.handlePaymentSummaryAction}"/>
                         </lightning:layoutItem>
                     </lightning:layoutItem>
                 </aura:if>
             </aura:if>
             
-            <aura:if isTrue="{!v.currentPage == 'email'}">
+            <aura:if isTrue="{!v.ShowEmailConfirmation}">
                 <lightning:layout>
                     <lightning:layoutItem flexibility="grow" padding="around-medium">
                         <ui:message title="Info" severity="info">
@@ -160,7 +192,16 @@
                 </lightning:layoutItem>
                 <lightning:layoutItem flexibility="grow" class="payment-options-pane">
                     <lightning:tabset selectedTabId="one">
-                        <lightning:tab label="{!$Label.c.saved_cards}" id="one">
+                        <lightning:tab label="{!$Label.c.Payment_Details}" id="one">
+                            <aura:if isTrue="{!v.CardUILoading}">
+                                <lightning:spinner alternativeText="Loading" size="small"/>
+                            </aura:if>
+                            <iframe aura:id="card-ui" src="{!v.cardUrl}" onload="{!c.CardLoaded}" frameborder="0" width="100%" height="200"/>
+                            <aura:if isTrue="{!and(v.CheckoutItems.length > 0, v.ShowPaymentOptions)}">
+                                
+                            </aura:if>
+                        </lightning:tab>
+                        <lightning:tab label="{!$Label.c.saved_cards}" id="two">
                             <aura:if isTrue="{!v.PaymentMethodsLoading}">
                                 <lightning:spinner alternativeText="Loading" size="small"/>
                             </aura:if>
@@ -178,19 +219,14 @@
                                     <aura:if isTrue="{!card.id == v.SelectedPaymentSource}">
                                         <div style="text-align: center;">
                                             <lightning:button label="{!$Label.c.process_cart_items}"
-                                                              onclick="{!c.onCardCharge}"
+                                                              onclick="{!c.handlePaymentMethodCharge}"
                                                               class="payment-card-button" variant="brand"/>
                                         </div>
                                     </aura:if>
                                 </div>
                             </aura:iteration>
                         </lightning:tab>
-                        <!-- <lightning:tab label="{!$Label.c.credit_or_debit_card}" id="two">
-                            <aura:if isTrue="{!v.StripeCardUILoading}">
-                                <lightning:spinner alternativeText="Loading" size="small"/>
-                            </aura:if>
-                            <iframe id="stripeCardUI" src="{!v.StripeCardUI}" onload="{!c.stripeCardLoaded}"/>
-                        </lightning:tab> -->
+                        
                         <!-- <lightning:tab label="{!$Label.c.ach_saved_accounts}" id="three">
                             <aura:if isTrue="{!v.PaymentMethodsLoading}">
                                 <lightning:spinner alternativeText="Loading" size="small"/>
@@ -227,7 +263,7 @@
     <footer>
         <div class="slds-col modal-footer slds-modal__footer">
             <lightning:layoutItem flexibility="grow" padding="around-small">
-                <aura:if isTrue="{!and(v.CheckoutItems.length > 0, v.currentPage == 'sc1')}">
+                <aura:if isTrue="{!and(v.CheckoutItems.length > 0, v.ShowDefaultPage)}">
                     <lightning:button class="long-button" variant="destructive"
                                       label="{!$Label.c.email + ' (' + v.CheckoutItems.length + ')'}"
                                       iconName="utility:email" onclick="{!c.onSendLinkForRecharge}"/>

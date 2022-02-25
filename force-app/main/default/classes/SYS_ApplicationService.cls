@@ -292,7 +292,7 @@ global virtual class SYS_ApplicationService {
      */
     global virtual SYS_IntegrationLog__c generateLogForWebhookReq(String method) {
         String requestBody = RestContext.request.requestBody.toString();
-        SYS_IntegrationLog__c log = SYS_ApplicationService.getLogsToInsert(requestBody);
+        SYS_IntegrationLog__c log = SYS_Helper.getLogsToInsert(requestBody);
 
         String algo = SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).Hashing_Algo__c;
         if(algo!=NULL && algo!='')
@@ -303,7 +303,7 @@ global virtual class SYS_ApplicationService {
         log.Flat_Key_for_Resource__c = 'attributes.type';
         log.SYS_IntegrationSettings__c = SYS_DataCache.INT_TYPE;
         log.Status__c = 'NEW';
-        log.External_Id_Field_API_Name__c = 'SYS_Key__c';
+        //log.External_Id_Field_API_Name__c = 'SYS_Key__c';
         log.How_to_process__c = 'use_custom_apex_handler';
         log.Custom_Apex_Handler__c = 'SYS_ApplicationService';
 

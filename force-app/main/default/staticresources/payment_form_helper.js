@@ -2,13 +2,34 @@
 
 $(document).ready(function(){
     console.log('ready-state');
+    console.log(window.location);
     load();
     handlePaymentSourceSelection();
     handlePay();
+
 });
+
+function getLoginKey() {
+    const urlParams = new URLSearchParams(window.location.search);
+    var loginKey = urlParams.get('loginKey');
+    if (!loginKey) {
+        loginKey = $('#api-login-id').val();
+    }
+    return loginKey;
+}
+
+function getPublicKey() {
+    const urlParams = new URLSearchParams(window.location.search);
+    var publicKey = urlParams.get('publicKey');
+    if (!publicKey) {
+        publicKey = $('#api-public-key').val();
+    }
+    return publicKey;
+}
 
 function handlePay() {
     $('#pay-button').click( function(){
+        console.log('pay clicked');
         var data = getSecureDate();
         Accept.dispatchData(data, 'responseHandler');
     });
@@ -37,8 +58,9 @@ function getSecureDate() {
         secureData.bankData = bankData;
     }
     
-    authData.clientKey = $('#api-public-key').val();
-    authData.apiLoginID = $('#api-login-id').val();
+
+    authData.clientKey =  getPublicKey();
+    authData.apiLoginID =  getLoginKey();
     secureData.authData = authData;
 
     console.log('data',secureData);
@@ -60,8 +82,26 @@ function responseHandler(response) {
 function useOpaqueData(responseData) {
     console.log(responseData.dataDescriptor);
     console.log(responseData.dataValue);
+    sendToLC(responseData.dataValue);
     $("#blob").val(responseData.dataValue);
     performCharge(responseData.dataValue, $('#payment-type').prop('checked'));
+    
+}
+
+// function EventListener() {
+//     console.log('inside listener');
+//     window.addEventListener("message", function(event) {
+        
+//         //    Handle message, generate nonce and send to LC
+//         console.log('vf page ',event.data);
+
+//     }, false);
+// }
+
+function sendToLC(messageValue) {
+    console.log('sent to parent');
+    var message = messageValue;
+    parent.postMessage(message, "*");
 }
 
 function handlePaymentSourceSelection() {
@@ -69,6 +109,9 @@ function handlePaymentSourceSelection() {
     var totalAmount = amount * 1.0399;
 
     $('#credit-card-button').click(function(){
+        $('#credit-card-button').addClass('slds-is-active');
+        $('#bank-button').removeClass('slds-is-active');
+
         $('#credit-card-button').addClass('selected-button');
         $('#bank-button').removeClass('selected-button');
         // showLoading();
@@ -80,6 +123,9 @@ function handlePaymentSourceSelection() {
         $('#payment-type').prop('checked', true);
     });
     $('#bank-button').click(function(){
+        $('#credit-card-button').removeClass('slds-is-active');
+        $('#bank-button').addClass('slds-is-active');
+
         $('#credit-card-button').removeClass('selected-button');
         // $('#credit-card-button').addClass('slds-button_neutral');
         $('#bank-button').addClass('selected-button');

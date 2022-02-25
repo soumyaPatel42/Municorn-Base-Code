@@ -18,6 +18,53 @@ public with sharing class ChargeController {
     }
 
     @AuraEnabled
+    public static void loadPaymentMethod(String accountId) {
+        SYS_DataCache.INT_TYPE = 'Authorize';
+        SYS_DataCache.OBJ_TYPE = 'Athrz_Account';
+        Athrz_utility.syncPaymentMethod(accountId);
+    }
+
+    @AuraEnabled
+    public static List<Payment_Gateway__c> getPaymentGateway() {
+        List<Payment_Gateway__c> gateways = [SELECT Id, Name, Athrz_Active__c, Athrz_Api_Login_Id__c, Athrz_Base_Endpoint__c, Athrz_Public_Client_Key__c 
+                                            FROM Payment_Gateway__c WHERE Athrz_Active__c = true];
+        return gateways;
+    }
+
+    @AuraEnabled
+    public static void createTransaction(String intentId) {
+        
+    } 
+
+    @AuraEnabled
+    public static String createPaymentIntent(String nonce, List<ChargeRequest> chargeRequests) {
+        String intentId;
+        Payment_Intent__c request = new Payment_Intent__c();
+
+        for(chargeRequest chargeReq : chargeRequests) {
+            request.Name = 'Payment for '+chargeReq.contactName;
+            // request.Frequency__c = chargeReq.frequency;
+            request.Athrz_Email__c = chargeReq.emailId;
+            request.Athrz_Account__c = chargeReq.accountId;
+            request.Athrz_Amount__c = chargeReq.amount;
+            request.Status__c = 'payment_new';
+            request.Athrz_First_Charge_Date__c = chargeReq.firstChargeDate;
+            request.athrz_uuid__c = UUIDGenerator.createId();
+            request.Athrz_PaymentType__c = chargeReq.paymentType;
+            request.Athrz_Data_Value__c = nonce;
+            request.Payment_Gateway__c = chargeReq.gatewayId;
+        }
+        try {
+            insert request;
+            intentId = request.Id;
+        } catch(Exception e) {
+            throw new AuraHandledException(e.getMessage());
+        }
+
+        return intentId;
+    }
+
+    @AuraEnabled
     public static List<Payment_Method__c> getPaymentMethods(String objectId) {
         System.debug('payment-methods');
         List<Payment_Method__c> paymentMethods = [SELECT Id, OwnerId, IsDeleted, Name, CreatedDate, 
@@ -54,6 +101,7 @@ public with sharing class ChargeController {
             request.Scheduled_Payment__c = chargeReq.firstChargeDate;
             request.uuid__c = UUIDGenerator.createId();
             request.PaymentType__c = chargeReq.paymentType;
+            // request.Payment_Gateway__c = chargeReq.gatewayId;
 
             System.debug(today+' '+request.Scheduled_Payment__c);
             if(today.day() == chargeReq.firstChargeDate.day() &&
@@ -160,5 +208,6 @@ public with sharing class ChargeController {
         @AuraEnabled public String paymentRequestGroupId { get; set; }
         @AuraEnabled public Integer itemNumber { get; set; }
         @AuraEnabled public String contactName { get; set; }
+        @AuraEnabled public String gatewayId { get; set; }
     }
 }

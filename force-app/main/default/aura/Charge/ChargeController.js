@@ -1,30 +1,107 @@
 ({
 	doInit: function (component, event, helper) {
-		component.set('v.Loading', false);
+		
+		window.addEventListener("message", $A.getCallback(function(event) {
+            
+            console.log('event received', event.data);
+			// console.log('selected row', );
+			// component.apiCall('loadPaymentMethod', {accountId : component.get('v.recordId')},
+			// function(resp) {
+			// 	alert('updated');
+            //     component.displayMessage('Success', 'Payment successful', 'success');
+			// 	component.set('v.Loading', false);
+            // });
+			component.paymentRequest(event.data);
+        }), false);
 
+		component.paymentRequest = function(token) {
+			
+            var lines = component.get('v.selectedRows');
 
-        component.set('v.FrequencyOptions', [
-			{ 'label': 'One time payment', 'value': 'single'},
-			{ 'label': 'Monthly', 'value': 'month' },
-			{ 'label': 'Quarterly', 'value': 'quarter' },
-			{ 'label': 'Yearly', 'value': 'year' }
-		]);
+			console.log('line selected ',lines);
+			component.apiCall('createPaymentIntent', {
+				nonce : token,
+				chargeRequests : lines
+			}, function(returnVal) {
+				console.log('Payment intent Id ', returnVal);
+			}, function(error) {
+				component.displayMessage('Error', 'Failed to create record. Please contact your Administrator', 'Error');
+			});
+		}
 
-		component.set('v.CheckoutItemsColumns', [
-			{label: 'Frequency', fieldName: 'frequencyDisplayName', type: 'text', cellAttributes: { alignment: 'left' }},
-			{label: 'Amount', fieldName: 'amount', type: 'currency', editable:'true', cellAttributes: { alignment: 'left' }},
-			{label: 'First Charge Date',
-				   fieldName: 'firstChargeDate',
-				   editable:'true', type: 'date-local',
-				   typeAttributes: {
-					   day: 'numeric',
-					   month: 'short',
-					   year: 'numeric'
-				   },
-				   cellAttributes: { alignment: 'left' }
-			},
-			{type: 'button', typeAttributes: {name: 'deleteCheckoutItem', iconName: 'utility:delete', label: '', disabled: false, value: 'delete', variant: {fieldName: 'actionButton'}}}
-		]);
+		component.initData = function() {
+			component.set('v.FrequencyOptions', [
+				{ 'label': 'One time payment', 'value': 'single'},
+				{ 'label': 'Monthly', 'value': 'month' },
+				{ 'label': 'Quarterly', 'value': 'quarter' },
+				{ 'label': 'Yearly', 'value': 'year' }
+			]);
+
+			component.set('v.CheckoutItemsColumns', [
+				{label: 'Frequency', fieldName: 'frequencyDisplayName', type: 'text', cellAttributes: { alignment: 'left' }},
+				{label: 'Amount', fieldName: 'amount', type: 'currency', editable:'true', cellAttributes: { alignment: 'left' }},
+				{label: 'First Charge Date',
+					   fieldName: 'firstChargeDate',
+					   editable:'true', type: 'date-local',
+					   typeAttributes: {
+						   day: 'numeric',
+						   month: 'short',
+						   year: 'numeric'
+					   },
+					   cellAttributes: { alignment: 'left' }
+				},
+				{type: 'button', typeAttributes: {name: 'deleteCheckoutItem', iconName: 'utility:delete', label: '', disabled: false, value: 'delete', variant: {fieldName: 'actionButton'}}}
+			]);
+
+			component.apiCall('getObjectDetails', {objectId : component.get('v.recordId')},
+			function(returnVal){
+				console.log('Return Value :', returnVal);
+				component.set("v.EmailId",returnVal.Email__c);
+				component.set("v.selectedAccount", returnVal);
+				component.apiCall('getPaymentGateway',{},function(returnVal) {
+					component.set('v.selectedGateway', returnVal[0].Id);
+					component.set("v.gateways", returnVal);
+					component.loadThirtyPartyPaymentElements();
+				});
+			});
+		
+		}
+
+		component.load = function() {
+			console.log('load called');
+			if(component.get('v.sObjectName') == 'Account') {
+				console.log('apex-1');
+				component.apiCall('loadPaymentMethod', {accountId : component.get('v.recordId')},
+				function(resp) {
+					alert('updated');
+					component.displayMessage('Success', 'Payment successful', 'success');
+					component.apiCall('getPaymentMethods', {objectId : component.get('v.recordId')},
+					function(returnVal) {
+						console.log('Return Value methods :', returnVal);
+						var cardList = [];
+						var bankList= [];
+						for (var item in returnVal) {
+							if(returnVal[item].Card_Number__c) {
+								cardList.push(returnVal[item]);
+							} else {
+								bankList.push(returnVal[item]);
+							}
+						}
+						console.log('cards',cardList, bankList);
+						component.set('v.UserCards', cardList);
+						component.set('v.UserBankAccounts', bankList);
+						component.set('v.PaymentMethodsLoading', false);
+					});
+				});
+				
+			} else if(component.get('v.sObjectName') == 'Contact') {
+	
+			} else {
+	
+			}
+		}
+		
+		
 
 		component.uuid4 = function() {
 			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -54,40 +131,10 @@
             return dt > today;
         }
 
-		var action1 = component.get("c.getPaymentMethods");
-		action1.setParams({
-			objectId : component.get('v.recordId')
-		});
-		action1.setCallback(this, function(a){
-			var state = a.getState();
-			var returnVal = a.getReturnValue();
-			console.log('Return Value methods :', returnVal);
-
-			if(state == "SUCCESS"){
-				var cardList = [];
-				var bankList= [];
-				for (var item in returnVal) {
-					if(returnVal[item].Card_Number__c) {
-						cardList.push(returnVal[item]);
-					} else {
-						bankList.push(returnVal[item]);
-					}
-				}
-				console.log('cards',cardList, bankList);
-				component.set('v.UserCards', cardList);
-				component.set('v.UserBankAccounts', bankList);
-
-                component.set('v.PaymentMethodsLoading', false);
-			}else{
-				console.log("Failed with state: " + state);
-			}
-			component.set('v.Loading', false);
-		});
-		// $A.enqueueAction(action1);
+		var logApiResponses = true;
 
 		component.apiCall = function (controllerMethodName, params, success, failure) {
 			component.set('v.Loading', true);
-			console.log('api-call');
             var action = component.get('c.' + controllerMethodName);
             action.setParams(params);
             action.setCallback(this, function (data) {
@@ -107,36 +154,12 @@
                     if (logApiResponses) console.log(data.getReturnValue());
                     if (success) success(data.getReturnValue());
                 }
+				component.set('v.Loading', false);
             });
             $A.enqueueAction(action);
         };
 		
-		// component.apiCall('getObjectDetails', {objectId : component.get('v.recordId')}, function (emailResponse) {
-		// 	console.log('account imported');
-		// }, function (error) {
-		// 	component.set('v.Loading', false);
-		// 	component.displayMessage('Failure!', 'Failed to send email, Please try again!!!', 'error');
-		// });
-		console.log('init');
-		var action = component.get("c.getObjectDetails");
-		action.setParams({
-			objectId : component.get('v.recordId')
-		});
-		action.setCallback(this, function(a){
-			console.log('selected account');
-			var state = a.getState();
-			var returnVal = a.getReturnValue();
-			console.log('Return Value :', returnVal);
-
-			if(state == "SUCCESS"){
-				component.set("v.EmailId",returnVal.Email__c);
-				component.set("v.selectedAccount", returnVal);
-			}else{
-				console.log("Failed with state: " + state);
-			}
-		});
-		$A.enqueueAction(action);
-		$A.enqueueAction(action1);
+		
 
 		component.getEmail = function () {
             var email = component.get("v.EmailId");
@@ -147,8 +170,38 @@
             return email;
         };
 
+		component.loadThirtyPartyPaymentElements = function () {
+            
+			// var baseUrl = url.split('.')[0] + '--c.visualforce.com';
+			
+			var gateway = component.get('v.selectedGateway');
+			var gatewayList = component.get('v.gateways');
+			var loginKey, publicKey;
+			for(var i = 0; i < gatewayList.length ; i++) {
+				if(gateway == gatewayList[i].Id) {
+					console.log('found');
+					loginKey = gatewayList[i].Athrz_Api_Login_Id__c;
+					publicKey = gatewayList[i].Athrz_Public_Client_Key__c;
+				}
+			}
+			component.set('v.cardUrl', '/apex/CardUI?loginKey=' +  loginKey +
+										'&publicKey=' + publicKey + ''
+										);
+        }
+
 
     },
+	recordLoaded: function (component, event, helper) {
+        console.log('------LOADED------');
+		component.initData();
+    },
+	handleGatewayChange : function(component, event, helper) {
+		console.log('change handler');
+		var selected = component.find('payment-gateway').get("v.value");
+		console.log(selected);
+		console.log(component.get('v.selectedGateway'));
+		component.loadThirtyPartyPaymentElements();
+	},
 	editEmail: function (component, event, helper) {
         component.set('v.ShowEmail', true);
     },
@@ -167,8 +220,10 @@
 		firstChargeDate = new Date();
 		
 		var account = component.get('v.selectedAccount');
+		var uuid = component.uuid4();
+		var gateway = component.get('v.selectedGateway');
 		var request = {
-			id: component.uuid4(),
+			id: uuid,
 			amount: component.get('v.PaymentAmount'),
 			contactName: account.Name,
 			accountId: account.Id,
@@ -176,7 +231,8 @@
 			emailId: account.Email__c,
 			frequency: 'single',
 			firstChargeDate: firstChargeDate,
-			frequencyDisplayName: 'One time'
+			frequencyDisplayName: 'One time',
+			gatewayId: gateway
 		};
 		console.log('inside cart-3', request);
 
@@ -185,6 +241,10 @@
 		checkoutItems.push(request);
 		component.set('v.CheckoutItems', checkoutItems);
 		component.set('v.PaymentAmount', null);
+		component.find('CheckoutItemsTable').set("v.selectedRows", [uuid]);
+		if(component.get('v.selectedRows').length == 0) {
+			component.set('v.selectedRows', [request]);
+		}
 
         component.set('v.EnableAddToCardButton', true);
 		component.set('v.Loading', false);
@@ -194,36 +254,11 @@
         var requests = component.get('v.CheckoutItems');
 		component.set('v.Loading', true);
 		console.log('send-email');
-		var action = component.get("c.sendCheckoutEmail");
-		action.setParams({
-			chargeRequests: requests
+		component.apiCall('sendCheckoutEmail', {chargeRequests: requests},
+		function(returnVal) {
+			component.set('v.ShowDefaultPage', false);
 		});
-		action.setCallback(this, function(a){
-			var state = a.getState();
-			var returnVal = a.getReturnValue();
-			console.log('Return Value :', returnVal);
-
-			if(state == "SUCCESS"){
-				console.log('email sent');
-				component.set('v.currentPage', 'email');
-
-			}else{
-				console.log("Failed with state: " + state);
-			}
-			component.set('v.Loading', false);
-
-		});
-		$A.enqueueAction(action);
-
-		// component.apiCall('sendDonationEmail', {chargeRequests: requests}, function (emailResponse) {
-		// 	component.set('v.Loading', false);
-		// 	component.set('v.ShowEmailConfirmation', true);
-		// 	component.set('v.ShowDefaultPage', false);
-		// 	component.set('v.ShowTransactionDetails', false);
-		// }, function (error) {
-		// 	component.set('v.Loading', false);
-		// 	component.displayMessage('Failure!', 'Failed to send email, Please try again!!!', 'error');
-		// });
+		
     },
 	handleInlineEditOfCheckoutItems: function (component, event, helper) {
         var table = component.find("CheckoutItemsTable");
@@ -269,19 +304,37 @@
         cmp.set('v.CheckoutItems', rows);
     },
 	checkoutPayments: function (component, event, helper) {
+		var row = component.find('CheckoutItemsTable').getSelectedRows();
+		console.log('lines ',JSON.stringify(row));
+		if(row.length == 0) {
+			component.displayMessage('Error', 'Please select one payment request', 'Error');
+			return;
+		}
+		component.load();
 		component.set('v.ShowPaymentOptions', true);
-		component.set('v.currentPage', '');
+		component.set('v.ShowDefaultPage', false);
 
 	},
 	goToDefaultPage: function(component, event, helper) {
+		component.set('v.ShowDefaultPage', true);
+		component.set('v.ShowTransactionDetails', false);
+		component.set('v.ShowEmailConfirmation', false);
 		component.set('v.ShowPaymentOptions', false);
-		component.set('v.currentPage', 'sc1');
 	},
 	selectPaymentSource: function(component, event, helper) {
         var paymentSourceId = event.target.id;
         component.set('v.SelectedPaymentSource', paymentSourceId);
     },
-	myAction : function(component, event, helper) {
-		
+	CardLoaded: function(component, event, helper) {
+		console.log('vf loaded');
+		component.set('v.CardUILoading', false);
+	},
+	handlePaymentMethodCharge: function(component, event, helper) {
+		 
+	},
+	getSelectedName: function(component, event, helper) {
+		var lines = component.find('CheckoutItemsTable').getSelectedRows();
+		console.log('lines ',JSON.stringify(lines));
+		component.set('v.selectedRows', lines);
 	}
 })
