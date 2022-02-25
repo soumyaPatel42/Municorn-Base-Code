@@ -488,6 +488,7 @@ public virtual class SYS_Transformer {
     //Router makes sure that if the json is List, it breaks it down and passes to this method
     //Also, each resource gets broken down - TODO see if we can enhance this.
     public static List<sObject> getSObjectsToUpsert(List<String> jsonList, String resource) {
+
         List<sObject> objectsToUpsert = new List<sObject>();
         //TODO filters based on INBOUND, OUTBOUND etc
         // List<FieldSetting__mdt> mappings = [Select Id, ChildFieldApiName__c, FieldApiName__c, ObjectApiName__c,Key__c, RestResource__c, Direction__c,
@@ -529,6 +530,7 @@ public virtual class SYS_Transformer {
             sObjectApiName = mappings[0].ObjectApiName__c;
             SYS_DataCache.sObjectApiName = sObjectApiName;
             SYS_DataCache.OBJ_TYPE = mappings[0].ObjectSetting__r.DeveloperName;
+            
         }
 
         System.debug('-- MS SYS_DataCache.sObjectApiName in SYS_Transformer:'+SYS_DataCache.sObjectApiName);
@@ -564,105 +566,18 @@ public virtual class SYS_Transformer {
         return objectsToUpsert;
     }
     
-    /*************************************************** D E P R E C A T E D [ ***************************************************************/
-    public static List<sObject> parseJsonToChildObject_DEPRECATED(String jsonObj, String sObjectApiName, Map<String, FieldSetting__mdt> mapOfPaths) {
-        Map<String, Object> flatKeyMap = makeJsonIntoKeyValuePairs(jsonObj);
-        if(SYS_Transformer.isChild){
-        	System.debug('\n\n++++++++++++ flatKeyMap: '+flatKeyMap);
-            System.debug('\n\n++++++++++++ mapOfPaths: '+mapOfPaths);
- 	   }
-        
-		System.debug('\n\n++++++++++++ B4 sObjectApiName: '+sObjectApiName+' when child process is: '+SYS_Transformer.isChild);
-        //We are processing array so identify obj name from flatkeymao
-        if(sObjectApiName ==null && flatKeyMap.size()>0) {
-            //mapOfPaths map doesn't contain outbound fieldsetting. Therefore the key to get the objectname should be a NON outbound key
-            
-            for(String s:flatKeyMap.keySet()){
-                if(mapOfPaths.get(s)!=null){
-                    if(mapOfPaths.get(s).Direction__c!='OUTBOUND'){
-                        sObjectApiName =  mapOfPaths.get(s).ObjectApiName__c;            
-                    }
-                }
-            }
-            /*
-            FieldSetting__mdt fieldMapping = mapOfPaths.get((new List<String>(flatKeyMap.keySet()))[0]);
-            if(fieldMapping!=null)
-            	sObjectApiName = fieldMapping.ObjectApiName__c;
-			*/
-        }
-        System.debug('\n\n++++++++++++ After sObjectApiName23: '+sObjectApiName);
-        
-        //sObjectApiName is still empty means there are no outbound fields for the object as part of array processing
-        if(sObjectApiName=='' || sObjectApiName==null) return null;
-
-        List<sObject> objectList = new List<sObject>();
-        
-        // sObject sObj = Schema.getGlobalDescribe().get(sObjectApiName).newSObject();
-        
-        if(childRootElement != '' && SYS_Transformer.isChild) {
-            System.debug('individual obj==');
-
-            for(Map<String, Object> obj : childFlatKeyList) {
-                sObject sObj = Schema.getGlobalDescribe().get(sObjectApiName).newSObject();
-
-                for(String key : mapOfPaths.keySet()) {
-
-                    FieldSetting__mdt mapping = mapOfPaths.get(key);
-                    String fieldObj = mapping.ObjectApiName__c;
-                    //sObj.put('SYS_Key__c', '001');
-                    System.debug('\n\nRunning for '+mapping.ChildFieldApiName__c+' on:'+sObjectApiName + 'key=='+key);
-                    System.debug('child obj=='+obj);
-                    
-                    if(mapping.FieldApiName__c==null){
-                        
-                        continue;
-                    }
-           
-                    if(fieldObj == sObjectApiName && SYS_Transformer.isChild) {
-                        SObjectType r = ((SObject)(Type.forName('Schema.'+sObjectApiName).newInstance())).getSObjectType();
-                        DescribeSObjectResult d = r.getDescribe();
-                        System.debug('\n\nField Type for else '+mapping.ChildFieldApiName__c+' obj=='+sObjectApiName);
-                        String fieldType = d.fields
-                                .getMap()
-                                .get(mapping.ChildFieldApiName__c)
-                                .getDescribe()
-                                .getType()+'';
-                        System.debug('\n\n Field Type for '+mapping.ChildFieldApiName__c+' :'+fieldType);
-                        System.debug('\n flatmapchild=='+obj.get(key));
-                        //TODO add other field types
-
-                        if(fieldType=='DATE'){
-                            try{
-                                sObj.put(mapping.ChildFieldApiName__c, date.valueOf((String)obj.get(key)));
-                            }catch(Exception e){
-                                
-                            }
-                        } else if (fieldType == 'MULTIPICKLIST') { //TODO
-                            Object listValues = obj.get(key);
-                            if(listValues instanceof List<Object>) {
-                                  
-                            }
-                        } else if (mapping.ChildFieldApiName__c == 'Is_Taxable__c') {
-                            sObj.put(mapping.ChildFieldApiName__c, String.valueof(obj.get(key)) == 'TAX' ? true : false);
-                        }
-                        else if (fieldType == 'STRING') {
-                            sObj.put(mapping.ChildFieldApiName__c, String.valueof(obj.get(key)));
-                        }
-                        else{
-                            sObj.put(mapping.ChildFieldApiName__c, obj.get(key));
-                        }
-                    }
-                }
-                objectList.add(sObj);
-            }
-        }
-        return objectList;
-    }
-    /*************************************************** D E P R E C A T E D ] ***************************************************************/
-    //
+    
 
     public static sObject parseJsonToObject(String jsonObj, String sObjectApiName, Map<String, FieldSetting__mdt> mapOfPaths) {
-        Map<String, Object> flatKeyMap = makeJsonIntoKeyValuePairs(jsonObj);
+        Map<String, Object> flatKeyMapWithCaseSensitiveKeys = makeJsonIntoKeyValuePairs(jsonObj);
+
+        // MS Added to avoid dependency on Casing of key in JSON [
+        Map<String, Object> flatKeyMap = new Map<String,Object>();
+        for(String casedKey : flatKeyMapWithCaseSensitiveKeys.keySet()){
+            flatKeyMap.put(casedKey.toLowerCase(),flatKeyMapWithCaseSensitiveKeys.get(casedKey));
+        }
+        // MS Added to avoid dependency on Casing of key in JSON ]
+
         System.debug('SYS_DataCache.sObjectApiName in parseJsonToObject:'+SYS_DataCache.sObjectApiName);
         sObject sObj = Schema.getGlobalDescribe().get(SYS_DataCache.sObjectApiName).newSObject();
         if(SYS_Transformer.isChild){
@@ -715,7 +630,7 @@ public virtual class SYS_Transformer {
                 }
 
                 SYS_ApplicationService appService = (SYS_ApplicationService)Type.forName(fieldMappingHandler).newInstance();
-                appService.processFieldMapping(mapping,sObj,flatKeyMap.get(key),sObjectApiName);
+                appService.processFieldMapping(mapping,sObj,flatKeyMap.get(key.toLowerCase()),sObjectApiName);
 
                 
             } 
@@ -797,13 +712,17 @@ public virtual class SYS_Transformer {
                         }
                         System.debug('in else=='+result);
                         System.debug('MS Child Objects to be processed:'+childRecList);
+                        System.debug('MS condition for Key: '+key+' = '+(SYS_DataCache.externalKeyByResourceMap.containsKey(key.toLowerCase())));
                         
                         //24 jan 2022
-                        if(key == 'paymentProfiles') {
-                            System.debug('child element process:');
-                            ID jobID = System.enqueueJob(new SYS_QueueableForInboundChild(SYS_DataCache.log,childRecList,key,SYS_DataCache.INT_TYPE));
+                        // if(key == 'paymentProfiles') {
+                        //     System.debug('child element process:');
+                        //     ID jobID = System.enqueueJob(new SYS_QueueableForInboundChild(SYS_DataCache.log,childRecList,key,SYS_DataCache.INT_TYPE));
 
-                        }
+                        // }
+                        //AP-106
+                        if(SYS_DataCache.externalKeyByResourceMap.containsKey(key.toLowerCase()))
+                            ID jobID = System.enqueueJob(new SYS_QueueableForInboundChild(SYS_DataCache.log,childRecList,key,SYS_DataCache.INT_TYPE));
                         //System.debug('job id is==='+jobID);
                     }
                 }
