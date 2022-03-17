@@ -256,42 +256,37 @@ global virtual class SYS_ApplicationService {
         }
         else{
             
-            try{
+            
+            Integer yearIndex = format.indexOf('YYYY');
+            Integer monthIndex = format.indexOf('MM');
+            Integer dateIndex = format.indexOf('DD');
+            Integer hoursIndex = format.indexOf('hh');
+            Integer minutesIndex = format.indexOf('mm');
+            Integer secondsIndex = format.indexOf('ss');
+            Integer millisecondsIndex = format.indexOf('sss');
 
-                Integer yearIndex = format.indexOf('YYYY');
-                Integer monthIndex = format.indexOf('MM');
-                Integer dateIndex = format.indexOf('DD');
-                Integer hoursIndex = format.indexOf('hh');
-                Integer minutesIndex = format.indexOf('mm');
-                Integer secondsIndex = format.indexOf('ss');
-                Integer millisecondsIndex = format.indexOf('sss');
+            Integer tzHours = format.indexOf('zh');
+            Integer tzMins = format.indexOf('zm');
 
-                Integer tzHours = format.indexOf('zh');
-                Integer tzMins = format.indexOf('zm');
+            String value =  dt.substring(yearIndex, yearIndex + 4) + '-' +
+                            dt.substring(monthIndex, monthIndex + 2) + '-' +
+                            dt.substring(dateIndex, dateIndex + 2) +
+                            ' ' +
+                            dt.substring(hoursIndex, hoursIndex + 2) + ':' +
+                            dt.substring(minutesIndex, minutesIndex + 2) + ':' +
+                            dt.substring(secondsIndex, secondsIndex + 2);
 
-                String value =  dt.substring(yearIndex, yearIndex + 4) + '-' +
-                                dt.substring(monthIndex, monthIndex + 2) + '-' +
-                                dt.substring(dateIndex, dateIndex + 2) +
-                                ' ' +
-                                dt.substring(hoursIndex, hoursIndex + 2) + ':' +
-                                dt.substring(minutesIndex, minutesIndex + 2) + ':' +
-                                dt.substring(secondsIndex, secondsIndex + 2);
+            Integer tzHoursOffset = 0;
+            Integer tzMinsOffset = 0;
+            if(tzHours > 0 && tzMins > 0){
+                Integer tzSymbol = format.indexOf('_');
 
-                Integer tzHoursOffset = 0;
-                Integer tzMinsOffset = 0;
-                if(tzHours > 0 && tzMins > 0){
-                    Integer tzSymbol = format.indexOf('_');
-
-                    tzHoursOffset = Integer.valueOf((dt.substring(tzSymbol,tzSymbol+1) + dt.substring(tzHours,tzHours + 2)));
-                    tzMinsOffset = Integer.valueOf((dt.substring(tzSymbol,tzSymbol+1) + dt.substring(tzMins)));
-                }
-
-                newDatetime = DateTime.valueOfGmt(value).addHours(tzHoursOffset).addMinutes(tzMinsOffset);
-
-
-            }catch(Exception e){
-                e.setMessage('\n\n Invalid Datetime or unsupported Datetime conversion format');
+                tzHoursOffset = Integer.valueOf((dt.substring(tzSymbol,tzSymbol+1) + dt.substring(tzHours,tzHours + 2)));
+                tzMinsOffset = Integer.valueOf((dt.substring(tzSymbol,tzSymbol+1) + dt.substring(tzMins)));
             }
+
+            newDatetime = DateTime.valueOfGmt(value).addHours(tzHoursOffset).addMinutes(tzMinsOffset);
+
 
             return newDatetime;
                 
@@ -303,8 +298,27 @@ global virtual class SYS_ApplicationService {
        return Date.valueOf((String)value);
     }
 
-    global virtual Time getTimeValue(FieldSetting__mdt mapping, String value){
-        Time timeValue = Time.newInstance(10, 10, 10, 20); 
+    global virtual Time getTimeValue(FieldSetting__mdt mapping, String ts){
+        
+        String format = 'hh:mm:ss.sssZ';
+        
+        Integer hoursIndex = format.indexOf('hh');
+        Integer minutesIndex = format.indexOf('mm');
+        Integer secondsIndex = format.indexOf('ss');
+        Integer millisecondsIndex = format.indexOf('sss');
+
+        Integer hours = Integer.valueOf(ts.substring(hoursIndex, hoursIndex + 2));
+        Integer minutes = Integer.valueOf(ts.substring(minutesIndex, minutesIndex + 2));
+        Integer seconds = (secondsIndex > 0)?Integer.valueOf(ts.substring(secondsIndex, secondsIndex + 2)):0;
+        Integer ms = (millisecondsIndex > 0)?Integer.valueOf(ts.substring(millisecondsIndex, millisecondsIndex + 3)):0;
+
+        Time timeValue = 
+        Time.newInstance(   hours, 
+                            minutes, 
+                            seconds, 
+                            ms );
+        System.debug('=============== '+timeValue);
+
         return timeValue;
      }
 
