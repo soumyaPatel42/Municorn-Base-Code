@@ -274,7 +274,7 @@ global virtual class SYS_ApplicationService {
                             ' ' +
                             dt.substring(hoursIndex, hoursIndex + 2) + ':' +
                             dt.substring(minutesIndex, minutesIndex + 2) + ':' +
-                            (secondsIndex > 0?dt.substring(secondsIndex, secondsIndex + 2):0);
+                            (secondsIndex > 0?dt.substring(secondsIndex, secondsIndex + 2):'00');
 
             Integer tzHoursOffset = 0;
             Integer tzMinsOffset = 0;
@@ -985,6 +985,12 @@ global virtual class SYS_ApplicationService {
 
                 if(SYS_DataCache.OBJ_TYPE!=NULL)
                     logResp.Resource__c = SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).Resource_Name__c;
+                
+                logResp.How_To_Process__c = 'use_custom_apex_handler';
+                logResp.Custom_Apex_Handler__c = SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).ApexHandler__c;
+            
+            }
+            else{
 
                 if(SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).Always_Ignore_Response__c){
                     logResp.How_To_Process__c = 'ignore_log';
@@ -994,10 +1000,8 @@ global virtual class SYS_ApplicationService {
                     logResp.How_To_Process__c = 'use_custom_apex_handler';
                     logResp.Custom_Apex_Handler__c = SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).ApexHandler__c;
                 }
-            }
-            else{
-                logResp.Status__c = 'DONE';
-                logResp.How_To_Process__c = 'ignore_log';
+                //logResp.Status__c = 'DONE';
+                //logResp.How_To_Process__c = 'ignore_log';
 
             }
         
