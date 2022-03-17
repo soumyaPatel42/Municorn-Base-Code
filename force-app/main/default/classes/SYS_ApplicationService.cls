@@ -274,7 +274,7 @@ global virtual class SYS_ApplicationService {
                             ' ' +
                             dt.substring(hoursIndex, hoursIndex + 2) + ':' +
                             dt.substring(minutesIndex, minutesIndex + 2) + ':' +
-                            dt.substring(secondsIndex, secondsIndex + 2);
+                            (secondsIndex > 0?dt.substring(secondsIndex, secondsIndex + 2):0);
 
             Integer tzHoursOffset = 0;
             Integer tzMinsOffset = 0;
