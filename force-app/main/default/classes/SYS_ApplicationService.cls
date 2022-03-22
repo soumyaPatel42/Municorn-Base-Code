@@ -90,11 +90,12 @@ global virtual class SYS_ApplicationService {
 
     //TODO Test coverage
     global virtual String getIdFromExternalKey(String objectApiName, String externalKey, String externalId){
-        sObject parentRecord = Database.query('SELECT Id FROM '+objectApiName+' WHERE '+externalKey+'= \''+externalId+'\'');
-        if(parentRecord!=NULL)
-            return String.valueOf(parentRecord.get('Id'));
+        List<sObject> parentRecord = new List<sObject>();
+        parentRecord = Database.query('SELECT Id FROM '+objectApiName+' WHERE '+externalKey+'= \''+externalId+'\'');
+        if(parentRecord!=NULL && parentRecord.size()>0)
+            return String.valueOf(parentRecord[0].get('Id'));
         else
-            return '';
+            return null;
     }
 
 
@@ -362,10 +363,11 @@ global virtual class SYS_ApplicationService {
             sObj.put(mapping.FieldApiName__c, getDateValue(mapping,(String)value) /*Date.valueOf((String)value)*/);
         }
         else if(fieldType=='DATETIME'){
-            sObj.put(mapping.FieldApiName__c, getDatetimeValue(mapping, (String)value));
+            
+            sObj.put(mapping.FieldApiName__c, getDatetimeValue(mapping, String.valueOf(value)));
         }
         else if(fieldType=='TIME'){
-            sObj.put(mapping.FieldApiName__c, getTimeValue(mapping, (String)value));
+            sObj.put(mapping.FieldApiName__c, getTimeValue(mapping, String.valueOf(value)));
         }
         else if (fieldType == 'STRING') {
             sObj.put(mapping.FieldApiName__c, String.valueof(value));
