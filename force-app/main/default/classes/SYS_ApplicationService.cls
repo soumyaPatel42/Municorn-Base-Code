@@ -646,7 +646,9 @@ global virtual class SYS_ApplicationService {
         jsonBody =  SYS_Helper.getDataFrom(log); 
         jsonBody = preprocessJSONForInbound(log,jsonBody);
 
-        if(SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).Notifications_are_partial__c){
+        if(SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).Notifications_are_partial__c && 
+            log.Type__c == 'INBOUND'
+            ){
             String baseEndpoint = SYS_DataCache.integrationSetting.get(SYS_Datacache.INT_TYPE).BaseAPIEndPoint__c;
             String getURLPattern = SYS_DataCache.integrationSetting.get(SYS_Datacache.INT_TYPE).GET_URL_Pattern__c;
             
@@ -1045,11 +1047,13 @@ global virtual class SYS_ApplicationService {
             }
             else{
 
-                if(SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).Always_Ignore_Response__c){
-                    logResp.How_To_Process__c = 'ignore_log';
-                    logResp.Status__c = 'DONE';
+                
+                if(SYS_DataCache.OBJ_TYPE != NULL && SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).Always_Ignore_Response__c){
+                        logResp.How_To_Process__c = 'ignore_log';
+                        logResp.Status__c = 'DONE';
                 }
                 else{
+                    logResp.SYS_Operation_Type__c = 'UPSERT';
                     logResp.How_To_Process__c = 'use_custom_apex_handler';
                     logResp.Custom_Apex_Handler__c = SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).ApexHandler__c;
                 }
