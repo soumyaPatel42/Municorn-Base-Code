@@ -1,6 +1,36 @@
 public class SYS_Helper {
 
     /* ------------------------------------------------------------------------ */
+
+    public static Datetime secondsToDatetime(String expiry){
+        return secondsToDatetime(Integer.valueOf(expiry));
+    }
+
+    public static Datetime secondsToDatetime(Integer expiry){
+        Integer day = 86400;
+        Integer hour = 3600;
+        Integer minute = 60;
+        Integer totalSeconds = expiry;
+        Integer daysout = Integer.valueOf(Math.floor(totalseconds / day));
+        Integer hoursout = Integer.valueOf(Math.floor((totalseconds - daysout * day)/hour));
+        Integer minutesout = Integer.valueOf(Math.floor((totalseconds - daysout * day - hoursout * hour)/minute));
+        Integer secondsout = Integer.valueOf(totalseconds - daysout * day - hoursout * hour - minutesout * minute);
+        String inpputString = System.now().yearGmt()+'-'+System.now().monthGmt()+'-'+(System.now().dayGmt()+daysout)+'T'+(System.now().hourGmt()+hoursout)+':'+(System.now().minuteGmt()+minutesout)+':'+(System.now().secondGmt()+secondsout)+'.'+'000Z';
+        System.debug('MS Date time:'+inpputString);
+        DateTime resultDateTime = DateTime.valueof(inpputString.replace('T', ' '));
+        return resultDateTime;
+    }
+    /* ------------------------------------------------------------------------ */
+
+    public static String getUUID()
+    {
+        Blob b = Crypto.GenerateAESKey(128);
+        String h = EncodingUtil.ConvertTohex(b);
+        String guid = h.SubString(0,8)+ '-' + h.SubString(8,12) + '-' + h.SubString(12,16) + '-' + h.SubString(16,20) + '-' + h.substring(20);
+        return guid;
+    }
+
+    /* ------------------------------------------------------------------------ */
     public static String getAllFieldsFor(String objName){
 
         List<String> fields = new List<String>();
@@ -90,53 +120,96 @@ public class SYS_Helper {
 
     @future
     public static void flagLogForRetry(Id logId){
-        SYS_IntegrationLog__c log = new SYS_IntegrationLog__c(Id=logId);
-        log.retry__c = true;
-        update log;
+        if(logId!=NULL){
+            SYS_IntegrationLog__c log = new SYS_IntegrationLog__c(Id=logId);
+            log.retry__c = true;
+            update log;
+        }else{
+            //TODO - How to update the log record?
+        }
     }
 
     /* ------------------------------------------------------------------------ */
 
-    public static Map<String, Object> getFlatKeys(String jsonObj) {
+    public static Map<String, Object> getFlatKeys(String jsonObj,String pattern) {
         Object result = JSON.deserializeUntyped(jsonObj);
         Map<String, Object> flatKeyMap = new Map<String, Object>();
         if (result instanceof Map<String, Object>) {
-            recursiveJsonParser((Map<String, Object>)result, new List<String>(), flatKeyMap);
+            recursiveJsonParser((Map<String, Object>)result, new List<String>(), flatKeyMap,pattern);
         }
         return flatKeyMap;
     }
     
-    public static void recursiveJsonParser(Map<String, Object> jsonObject, List<String> parents, Map<String, Object> result) {
+    public static void recursiveJsonParser(Map<String, Object> jsonObject, List<String> parents, Map<String, Object> result,String pattern) {
+        
+        //String pattern = 'A.B';
+        
+        pattern = pattern.rightPad(4);
+        String open = String.fromCharArray( new List<integer>{pattern.getChars()[1]});
+        String close = String.fromCharArray( new List<integer>{pattern.getChars()[3]});
+        open = open.replace('_', SYS_DataCache.FLAT_KEY_SEPERATOR);
+        close = close.trim();
+        System.debug('*********** open:'+open+' '+'close:'+close);
+
         for(String key : jsonObject.keySet()) {
             Object currentObj = jsonObject.get(key);
             if (currentObj instanceof Map<String, Object>) {
                 Map<String, Object> child = (Map<String, Object>)currentObj;
                 parents.add(key);
-                recursiveJsonParser(child, parents, result);
+                recursiveJsonParser(child, parents, result,pattern);
                 parents.remove(parents.size() - 1);
            
-            } else {
+            }
+            else{
                 String parentKey = '';
                 if(parents.size() > 0) {
-                    parentKey = String.join(parents, '.');
-                } 
-                if (currentObj instanceof Decimal) {
-                    //Add
-                	result.put(String.isBlank(parentKey) ? key : parentkey+'.'+ key, (Decimal) currentObj);
-                } else if (currentObj instanceof Integer) {
-                    //Add
-                    result.put(String.isBlank(parentKey) ? key : parentkey+'.'+ key, (Integer) currentObj);
+                    parentKey = String.join(parents, SYS_DataCache.FLAT_KEY_SEPERATOR);
                 }
-                else if (currentObj instanceof String) {
-                    //Add
-                    result.put(String.isBlank(parentKey) ? key : parentkey+'.'+ key,  currentObj);
-                } else if (currentObj instanceof Boolean) {
-                    //Add
-                    result.put(String.isBlank(parentKey) ? key : parentkey+'.'+ key, (Boolean) currentObj);
+
+                String resultKey = String.isBlank(parentKey) ? key : parentkey + open + key + close;
+
+                if(pattern == 'A[B]'){
+                    for(Integer i=0; i < parentKey.countMatches(SYS_DataCache.FLAT_KEY_SEPERATOR); i++){
+                        resultKey+= close;
+                    }
+    
+                    resultKey = resultKey.replace(SYS_DataCache.FLAT_KEY_SEPERATOR, open);
+                }
+                
+                
+
+                if(currentObj instanceof Decimal){
+
+                	result.put(resultKey, (Decimal) currentObj);
+
+                } else if (currentObj instanceof Integer){
+
+                    result.put(resultKey, (Integer) currentObj);
+                }
+                else if(currentObj instanceof String){
+
+                    result.put(resultKey,  currentObj);
+
+                } else if(currentObj instanceof Boolean){
+
+                    result.put(resultKey, (Boolean) currentObj);
+
                 } 
-                else if (currentObj == null) {
+                else if(currentObj == null) {
                     //TODO - Verify accuracy on what needs to be done
-                    result.put(String.isBlank(parentKey) ? key : parentkey+'.'+ key, null);
+                    result.put(resultKey, null);
+                }
+                else if(currentObj instanceof List<Object>){
+
+                    List<Object> childArray = (List<Object>)currentObj;
+
+                    Integer arrLen = childArray.size();
+                    for (Integer i = 0; i < arrLen; i++){
+                        Map<String, Object> child = (Map<String, Object>)childArray[i];
+                        parents.add(key+'[' + i + ']');
+                        recursiveJsonParser(child, parents, result,pattern);
+                        parents.remove(parents.size() - 1);
+                    }
                 }
                 else{
                 	//TODO
