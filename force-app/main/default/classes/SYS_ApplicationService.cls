@@ -688,6 +688,7 @@ global virtual class SYS_ApplicationService {
         }
         else{
             String resource = getResourceFromJSON(log,jsonBody);
+            log.Resource__c = resource;
             SYS_debug.log('\n\n ------------------------------- \n\n Application Service resource:'+resource);
 
             List<sObject> sObjectsToDML = transformJsonToSObject(jsonBody, resource, log);
