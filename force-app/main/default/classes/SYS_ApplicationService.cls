@@ -18,6 +18,7 @@ global virtual class SYS_ApplicationService {
         String tokenFromUrl = RestContext.request.params.get('token');
         String tokenFromIntegrationSetting = SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).webhookToken__c;
 
+        System.debug('compare '+tokenFromUrl+' '+tokenFromIntegrationSetting);
         return (tokenFromUrl == tokenFromIntegrationSetting);
 
     }
@@ -337,7 +338,7 @@ global virtual class SYS_ApplicationService {
      * Arguement: record json and Integration setting
      * Override if custom log generation is required
      */
-    global virtual SYS_IntegrationLog__c generateLogForChildRecords(String parentLogId,String resource,String recordsJson,String integrationSetting) {
+    global virtual SYS_IntegrationLog__c generateLogForChildRecords(SYS_IntegrationLog__c parentLog,String resource,String recordsJson,String integrationSetting) {
         SYS_IntegrationLog__c log = SYS_Helper.getLogsToInsert(recordsJson);
 
         String algo = SYS_DataCache.integrationSetting.get(SYS_DataCache.INT_TYPE).Hashing_Algo__c;
@@ -345,7 +346,7 @@ global virtual class SYS_ApplicationService {
             log.Request_Digest__c = generateHash(recordsJson,algo);
 
         SYS_debug.log('MS SYS_DataCache.log in generate child log:'+SYS_DataCache.log.Id);
-        log.Parent__c = parentLogId;
+        log.Parent__c = parentLog.Id;
         log.Resource__c = resource;
         log.Type__c = 'INBOUND';
         log.SYS_Operation_Type__c = 'UPSERT';
@@ -363,6 +364,7 @@ global virtual class SYS_ApplicationService {
         //log.External_Id_Field_API_Name__c = 'SYS_Child_Key__c';
         log.How_to_process__c = 'use_custom_apex_handler';
         log.Custom_Apex_Handler__c = 'SYS_ApplicationService';
+        log.Gateway_Id__c = parentLog.Gateway_Id__c;
 
         return log;
     }

@@ -1,6 +1,6 @@
 public class SYS_integrationLogHandler {
 
-    public static boolean filterWebSericeToken(String token) { 
+   /*  public static boolean filterWebSericeToken(String token) { 
         
         String tokenMeta = SYS_DataCache.webhookToken;
         SYS_debug.log('token is=='+tokenMeta+'--url--'+token);
@@ -9,7 +9,7 @@ public class SYS_integrationLogHandler {
             return true;
         } 
         return (token.equals(tokenMeta) );  
-    }
+    } */
 
     public static string getProfileDetails(String profileId, String accountId) {
         String result;

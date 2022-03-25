@@ -11,6 +11,18 @@ public class PaymentFormController {
     public String country {get; set;}
     public String email {get; set;}
     public String accountName {get; set;}
+    public String error {get; set;}
+    public String paymentMessage {get; set;}
+    public Boolean savePayment {get; set;}
+    public Boolean saveAsDefault {get; set;}
+    public List<Payment_Method__c> cards {get; set;}
+    public List<Payment_Method__c> banks {get; set;}
+    public String nameOnAccount {get; set;}
+    public String accountNumber {get; set;}
+    public String accountRoutingNumber {get; set;}
+    public String accountType {get; set;}
+    public String paymentMethodId {get; set;}
+    public Boolean isPaymentMethod {get; set;}
 
     public String pageUrl {get; set;}
     public Boolean isCreditcard {get; set;}
@@ -26,29 +38,61 @@ public class PaymentFormController {
         
         string BaseURL = ApexPages.currentPage().getHeaders().get('Host');
         System.debug('BaseURL '+BaseURL);
-        
         isCreditcard = true; 
     } 
 
     public void initPage() {
-        paymentIntent = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
+        List<Payment_Intent__c> intents = getPaymentRequestByGroupId(ApexPages.currentPage().getParameters().get('t'));
         
-        apiLoginId = paymentIntent.Payment_Gateway__r.Athrz_Api_Login_Id__c;
-        apiPublicKey = paymentIntent.Payment_Gateway__r.Athrz_Public_Client_Key__c;
+        if(intents.size() > 0) {
+            paymentIntent = intents[0];
+            if(paymentIntent.Status__c == 'payment_done') {
+                paymentMessage = 'Payment done sucessfully!!';
+            }
+            System.debug('message '+paymentMessage);
+            apiLoginId = paymentIntent.Payment_Gateway__r.Athrz_Api_Login_Id__c;
+            apiPublicKey = paymentIntent.Payment_Gateway__r.Athrz_Public_Client_Key__c;
 
-        amount = paymentIntent.Athrz_Amount__c;
-        accountId = paymentIntent.Athrz_Account__c;
-        street = paymentIntent.Athrz_Account__r.BillingStreet;
-        city = paymentIntent.Athrz_Account__r.BillingCity;
-        state = paymentIntent.Athrz_Account__r.BillingState;
-        zipcode = paymentIntent.Athrz_Account__r.BillingPostalCode;
-        country = paymentIntent.Athrz_Account__r.BillingCountry;
-        email = paymentIntent.Athrz_Email__c;
-        accountName = paymentIntent.Athrz_Account__r.Name;
+            amount = paymentIntent.Athrz_Amount__c;
+            accountId = paymentIntent.Athrz_Account__c;
+            street = paymentIntent.Athrz_Account__r.BillingStreet;
+            city = paymentIntent.Athrz_Account__r.BillingCity;
+            state = paymentIntent.Athrz_Account__r.BillingState;
+            zipcode = paymentIntent.Athrz_Account__r.BillingPostalCode;
+            country = paymentIntent.Athrz_Account__r.BillingCountry;
+            email = paymentIntent.Athrz_Email__c;
+            accountName = paymentIntent.Athrz_Account__r.Name;
+
+            cards = Athrz_utility.getCardPaymentMethods(accountId);
+            banks = Athrz_utility.getBankPaymentMethods(accountId);
+        } else {
+            paymentMessage = 'Payment url is invalid!!';
+        }
     }
+
+    public void updateIntentBankDetails() {
+        
+        paymentIntent.Name_on_Account__c = nameOnAccount;
+        paymentIntent.Bank_Account_Number__c = accountNumber;
+        paymentIntent.Account_Routing_Number__c = accountRoutingNumber;
+        paymentIntent.Account_Type__c = accountType;
+
+        paymentIntent.Athrz_Payment_Method__c = paymentMethodId;
+
+        update paymentIntent;
+
+    }
+
+    public void updatePaymentMethod() {
+        paymentIntent.Athrz_Payment_Method__c = paymentMethodId;
+
+        update paymentIntent;
+    }
+
 
     public void charge() {
         System.debug('token is '+paymentToken+' credit card'+isCreditcard);
+        
         Decimal total = amount;
         if(isCreditcard) {
             total = (amount * 1.0399).setScale(2);
@@ -56,23 +100,37 @@ public class PaymentFormController {
 
         paymentIntent.Athrz_Amount__c = total;
         paymentIntent.Athrz_Data_Value__c = paymentToken;
+        paymentIntent.Status__c = 'payment_done';
         try {
-            // update paymentIntent;
             
-            String recordId = paymentIntent.Id;
-            SYS_DataCache.INT_TYPE = 'Authorize';
-            SYS_DataCache.OBJ_TYPE = 'Payment_Intent';
-            List<Payment_Intent__c> newList = [select id from Payment_Intent__c where id = :recordId];
-            SYS_ApplicationService appService = (SYS_ApplicationService)Type.forName(SYS_DataCache.objectSettingMap.get(SYS_DataCache.OBJ_TYPE).ApexHandler__c).newInstance();
-                    
-            Map<Id, String> jsonListForOutbound = appService.transformSObjectToJson(newList);
-            String requestBody = jsonListForOutbound.get(recordId).replace('##token##', paymentToken).replace('##amount##', String.valueOf(total));
-            chargePayment(requestBody);
+            String recordId = paymentIntent.Id, gatewayId;
+            Payment_Intent__c intent = [select id, Payment_Gateway__c from Payment_Intent__c where id = :recordId LIMIT 1];
+            gatewayId = intent.Payment_Gateway__c;
+            Athrz_utility.token = paymentToken;
+            Athrz_utility.amount = total;
+            Athrz_utility.savePayment = this.savePayment != null ?this.savePayment : false;
+            Athrz_utility.saveAsDefault = this.saveAsDefault != null ?this.saveAsDefault : false;
 
-            update paymentIntent;
+            String resource = isCreditcard ? 'Payment_Intent' : 'Payment_Intent_Bank';
+
+            resource = isPaymentMethod ? 'Payment_Intent_Proile' : resource;
+
+            Athrz_utility.chargePayment(recordId, gatewayId, resource, accountId);
+            if(Athrz_utility.error != null) 
+                this.error = Athrz_utility.error;
+            else {
+                this.paymentMessage = 'Payment done successfully!!';
+                update paymentIntent;
+                
+            }
+            
         } catch(Exception e) {
+            System.debug(e.getStackTraceString());
             System.debug(e.getMessage());
+            error = e.getMessage();
         }
+        System.debug('error '+Athrz_utility.error);
+
         // String token = apexpages.currentPage().getParameters().get('token');
         // System.debug('toekn '+token);
     }
@@ -181,7 +239,7 @@ public class PaymentFormController {
                     System.debug('#### resp3 code: '+resp3.getStatusCode());
                     System.debug('#### resp3: '+resp3.getBody());
 
-                    paymentMethodsLog = SYS_ApplicationService.getLogsToInsert(resp3.getBody().replace('\uFEFF', ''));
+                    paymentMethodsLog = SYS_Helper.getLogsToInsert(resp3.getBody().replace('\uFEFF', ''));
                     paymentMethodsLog.Status__c = 'NEW';
                     paymentMethodsLog.Type__c = 'INBOUND';
                     paymentMethodsLog.SYS_IntegrationSettings__c = SYS_DataCache.INT_TYPE;
@@ -240,7 +298,7 @@ public class PaymentFormController {
         return gen.getAsString();
     }
 
-    public Payment_Intent__c getPaymentRequestByGroupId(String uuid) {
+    public List<Payment_Intent__c> getPaymentRequestByGroupId(String uuid) {
         return [SELECT Id,
                     Athrz_Email__c,
                     Athrz_Account__c,

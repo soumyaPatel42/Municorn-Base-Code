@@ -1,4 +1,4 @@
-<apex:page >
+<apex:page showHeader="false" >
     <!-- Begin Default Content REMOVE THIS -->
 
     <!--
@@ -21,7 +21,7 @@
         <input type="hidden" value="" id="api-login-id"/>
         <input type="hidden" value="" id="api-public-key"/>
         <input type="hidden" id="payment-type" />
-        <div class="slds-vertical-tabs">
+        <!-- <div class="slds-vertical-tabs">
             <ul class="slds-vertical-tabs__nav" role="tablist" aria-orientation="vertical" >
                 <li class="slds-vertical-tabs__nav-item slds-is-active" title="{!$Label.credit_card}" role="presentation" id="credit-card-button">
                     <a class="slds-vertical-tabs__link" href="#" role="tab" tabindex="0" aria-selected="true" aria-controls="slds-vertical-tabs-0"
@@ -107,15 +107,15 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-1">
-            <div class="slds-box slds-box_x-small slds-text-align_right slds-m-around--x-small">
-                <button class="slds-button slds-button_neutral selected-button" id="pay-button">Pay
-                </button>
+        </div> -->
+        <div id="spinner" class="slds-spinner_container" style="display:none">
+            <div role="status" class="slds-spinner slds-spinner--small slds-spinner--base">
+                <div class="slds-spinner__dot-a"></div>
+                <div class="slds-spinner__dot-b"></div>
             </div>
         </div>
 
-        <!-- <div class="slds-scope slds-grow">
+        <div class="slds-scope slds-grow">
             <div class="credit-card-view">
                 <div class="slds-box slds-box_x-small slds-text-align_left slds-m-around--x-small">
                     <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
@@ -139,15 +139,12 @@
                     </div> 
                     <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
                         <div class="slds-form-element">
-                            <label class="slds-checkbox_toggle slds-grid">
-                                <span class="slds-form-element__label slds-m-bottom_none">Authorize only</span>
-                                <input type="checkbox" name="checkbox-toggle-15" value="checkbox-toggle-15" aria-describedby="checkbox-toggle-15" />
-                                <span id="checkbox-toggle-15" class="slds-checkbox_faux_container" aria-live="assertive">
-                                    <span class="slds-checkbox_faux"></span>
-                                    <span class="slds-checkbox_on">Active</span>
-                                    <span class="slds-checkbox_off">Inactive</span>
-                                </span>
-                            </label>
+                            <input type="checkbox" id="save-card" checked="checked" class="slds-p-horizontal_medium"/>Save information for future checkouts
+                        </div>
+                    </div>
+                    <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                        <div class="slds-form-element">
+                            <input type="checkbox" id="save-card-default" checked="checked" class="slds-p-horizontal_medium"/>Save as default for future checkouts
                         </div>
                     </div>
                 </div>
@@ -170,10 +167,26 @@
                         <div class="slds-form-element__control slds-col slds-size_1-of-2 slds-p-around_x-small">
                             <input type="text" id="payment-bank-type" placeholder="Bank Type" required="" class="slds-input" />
                         </div>
+                        <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                            <div class="slds-form-element">
+                                <input type="checkbox" id="save-bank" checked="checked" class="slds-p-horizontal_medium"/>Save information for future checkouts
+                            </div>
+                        </div>
+                        <div class="slds-form-element__control slds-col slds-size_1-of-1 slds-p-around_x-small">
+                            <div class="slds-form-element">
+                                <input type="checkbox" id="save-bank-default" checked="checked" class="slds-p-horizontal_medium"/>Save as default for future checkouts
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div> -->
+        </div>
+        <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-1">
+            <div class="slds-box slds-box_x-small slds-text-align_right slds-m-around--x-small">
+                <button class="slds-button slds-button_neutral selected-button" id="pay-button">Pay
+                </button>
+            </div>
+        </div>
     </body>
 
     <!-- End Default Content REMOVE THIS -->

@@ -32,7 +32,7 @@ public class ProcessTransactionWebhook implements Queueable, Database.AllowsCall
                                               Type__c,WhatId__c,Parent__c,Order__c
                                               FROM SYS_IntegrationLog__c WHERE Id in:sysLogIds];
 
-        for(SYS_IntegrationLog__c log : sysLog) {
+        /* for(SYS_IntegrationLog__c log : sysLog) {
             String body = log.data0__c+log.data1__c+log.data2__c+log.data3__c+
                     log.data4__c+log.data5__c+log.data6__c+log.data7__c+
                     log.data8__c+log.data9__c;
@@ -59,7 +59,7 @@ public class ProcessTransactionWebhook implements Queueable, Database.AllowsCall
                     List<sObject> upsertTrans = new List<sObject>{Schema.getGlobalDescribe().get('Account').newSObject()};//SYS_ApexHandler.getSingleSobjectsToUpsert_QB(resp.getBody().replace('\uFEFF', ''), 'transaction');
                     paymentRequestId = (String)upsertTrans[0].get('PaymentRequestId__c');
                     
-                    
+
                     // upsert upsertTrans;
                     // List<Database.UpsertResult> results = Database.upsert(upsertTrans, Schema.getGlobalDescribe().get('Transaction__c').getDescribe().fields.getMap().get('Transaction_Id__c'), false);
                     // for(Database.UpsertResult result : results){ 
@@ -186,7 +186,7 @@ public class ProcessTransactionWebhook implements Queueable, Database.AllowsCall
                 }
 
             }
-        }
+        } */
     }
 
     public class transactionWebhook {

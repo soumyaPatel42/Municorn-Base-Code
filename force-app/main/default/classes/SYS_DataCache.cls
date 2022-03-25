@@ -87,7 +87,7 @@ public class SYS_DataCache {
                 external_key = new Map<String, String>();
                 for(FieldSetting__mdt fs : FieldMappingOutbound){
                     if(fs.Is_External_Field__c)
-                        external_key.put(fs.RestResource__c,fs.FieldApiName__c);
+                        external_key.put(fs.RestResource__c.toLowerCase(),fs.FieldApiName__c);
                 }
             }
             return external_key;
@@ -192,7 +192,7 @@ public class SYS_DataCache {
             if(mappings == null){
                 mappings = new List<FieldSetting__mdt>();
                 System.debug('Field Settings #### 1:'+mappings);
-                mappings = [Select Id,Order_Number__c, ChildFieldApiName__c,Log_API_for_field_mapping__c, Lookup_External_Key__c, Lookup_Object_API_Name__c,Is_External_Field__c,Is_Lookup__c, Get_value_from_Log__c,ChildFieldApiName__c,ObjectSetting__r.DeveloperName,masterlabel,Field_Mapping_Handler__c, ObjectSetting__r.masterlabel , StaticValue__c,IsChild__c, ObjectSetting__r.ObjectApiName__c, ObjectApiName__c, FieldApiName__c , Key__c, RestResource__c, Direction__c, ParentField__c, ChildRootElement__c,
+                mappings = [Select Id,developername, Order_Number__c,Log_API_for_field_mapping__c, Lookup_External_Key__c, Lookup_Object_API_Name__c,Is_External_Field__c,Is_Lookup__c, Get_value_from_Log__c,ChildFieldApiName__c,ObjectSetting__r.DeveloperName,masterlabel,Field_Mapping_Handler__c, ObjectSetting__r.masterlabel , StaticValue__c,IsChild__c, ObjectSetting__r.ObjectApiName__c, ObjectApiName__c, FieldApiName__c , Key__c, RestResource__c, Direction__c, ParentField__c, ChildRootElement__c,
                             ObjectSetting__r.Direction__c,ObjectSetting__r.Trigger_Condition__c,ObjectSetting__r.TriggerEvents__c, ObjectSetting__r.ResourcePath__c,ObjectSetting__r.url_params__c , ObjectSetting__r.ApexHandler__c 
                             from FieldSetting__mdt /*where Is_Active__c=true where FieldApiName__c != null*/
                             WHERE ObjectSetting__r.IntegrationType__r.developername = : SYS_DataCache.INT_TYPE AND Direction__c != 'INBOUND'
@@ -220,7 +220,7 @@ public class SYS_DataCache {
                 //             ObjectSetting__r.Object__r.QualifiedApiName , ObjectSetting__r.Direction__c, ObjectSetting__r.ResourcePath__c,ObjectSetting__r.url_params__c , ObjectSetting__r.ApexHandler__c 
                 //             from FieldSetting__mdt /*where Is_Active__c=true where FieldApiName__c != null*/
                 //             WHERE ObjectSetting__r.IntegrationType__r.developername = : SYS_DataCache.INT_TYPE AND Direction__c != 'OUTBOUND'];
-                String query = 'SELECT Id,Order_Number__c,StaticValue__c,Log_API_for_field_mapping__c, Lookup_External_Key__c, Lookup_Object_API_Name__c,Is_External_Field__c,Is_Lookup__c, Get_value_from_Log__c, ObjectSetting__r.DeveloperName,ChildFieldApiName__c,Field_Mapping_Handler__c, FieldApiName__c, ObjectApiName__c,Key__c, RestResource__c, Direction__c, ChildRootElement__c,' +                
+                String query = 'SELECT Id,developername,Order_Number__c,StaticValue__c,Log_API_for_field_mapping__c, Lookup_External_Key__c, Lookup_Object_API_Name__c,Is_External_Field__c,Is_Lookup__c, Get_value_from_Log__c, ObjectSetting__r.DeveloperName,ChildFieldApiName__c,Field_Mapping_Handler__c, FieldApiName__c, ObjectApiName__c,Key__c, RestResource__c, Direction__c, ChildRootElement__c,' +                
                 ' ObjectSetting__r.Object__r.QualifiedApiName , ObjectSetting__r.Direction__c, ObjectSetting__r.ResourcePath__c,ObjectSetting__r.url_params__c , ObjectSetting__r.ApexHandler__c ' + 
                 ' from FieldSetting__mdt '+
                 ' WHERE ObjectSetting__r.IntegrationType__r.developername =\''+SYS_DataCache.INT_TYPE+'\' AND Direction__c != \'OUTBOUND\' '; 
@@ -473,7 +473,7 @@ public class SYS_DataCache {
     public static map<String, ObjectSetting__mdt> objectSettingMap {
         get{
             if( objectSettingInit.isEmpty()) {
-                List<ObjectSetting__mdt> objMap = [SELECT DeveloperName, ApexHandler__c,BypassTrigger__c, ExternalFieldApi__c,Id,IntegrationType__r.developername , QueryClause__c,
+                List<ObjectSetting__mdt> objMap = [SELECT DeveloperName,BypassOrder__c, ApexHandler__c,BypassTrigger__c, ExternalFieldApi__c,Id,IntegrationType__r.developername , QueryClause__c,
                                     ObjectApiName__c,Object__c,QualifiedApiName,ResourcePath__c,url_params__c FROM ObjectSetting__mdt LIMIT 10000];
                 
                 for(ObjectSetting__mdt obj : objMap) {

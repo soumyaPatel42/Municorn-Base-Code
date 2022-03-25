@@ -376,7 +376,7 @@ public virtual class SYS_Transformer {
         }
 
         SYS_ApplicationService appService = (SYS_ApplicationService)Type.forName(fieldMappingHandler).newInstance();
-
+        System.debug('fieldMappingHandler '+fieldMappingHandler);
         Object value = appService.getFieldValues(obj, mapping, mapping.FieldApiName__c);
         gen.writeObjectField(key, value);
         
@@ -512,7 +512,7 @@ public virtual class SYS_Transformer {
         //     //-- M sObjectApiName = mapping.ObjectSetting__r.Object__r.QualifiedAPIName;
         // }
         for(FieldSetting__mdt item : SYS_DataCache.FieldMappingOutbound) { 
-            if(resource.equals(item.RestResource__c) /*&& item.ChildRootElement__c == null*/) {
+            if(resource.equalsIgnoreCase(item.RestResource__c) /*&& item.ChildRootElement__c == null*/) {
                 mappings.add(item);
                 String newKey = item.Key__c;//--M .replace( SYS_DataCache.ESCAPE_CHAR, '.'); 
                 mapOfPaths.put(newKey, item);
@@ -530,7 +530,7 @@ public virtual class SYS_Transformer {
             sObjectApiName = mappings[0].ObjectApiName__c;
             SYS_DataCache.sObjectApiName = sObjectApiName;
             SYS_DataCache.OBJ_TYPE = mappings[0].ObjectSetting__r.DeveloperName;
-            
+            System.debug(' Obj apiName-'+sObjectApiName+' mapping'+mappings[0]);
         }
 
         System.debug('-- MS SYS_DataCache.sObjectApiName in SYS_Transformer:'+SYS_DataCache.sObjectApiName);
